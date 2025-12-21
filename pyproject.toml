@@ -1,19 +1,25 @@
-[project]
+[tool.poetry]
 name = "payments-robot"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Pablo Ganga",email = "pablo.ganga1@gmail.com"}
-]
+authors = ["Pablo Ganga <pabloganga@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = []
 
+[tool.poetry.dependencies]
+python = ">=3.10,<=3.13"
+fastapi = "^0.111.1"
+uvicorn = {extras = ["standard"], version = "^0.30.6"}
+crewai = "^0.134.0"
+python-dotenv = "^1.1.1"
+aisuite = ">=0.1.10"
+stripe = "^10.2.0"
 
-[tool.poetry.source]
-name = "src"
-url = "src"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "-s"
