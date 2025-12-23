@@ -7,6 +7,6 @@
     - [x] Implement Service (Onboarding Logic) <!-- id: 9 -->
     - [x] Implement API Endpoint (`POST /merchants`) <!-- id: 10 -->
 - [ ] Commit and Push Changes <!-- id: 11 -->
-    - [ ] Add all changes <!-- id: 12 -->
-    - [ ] Commit with descriptive message <!-- id: 13 -->
-    - [ ] Push to remote <!-- id: 14 -->
+    - [x] Add all changes <!-- id: 12 -->
+    - [x] Comit with descriptive message <!-- id: 13 -->
+    - [x] Push to remote <!-- id: 14 -->
