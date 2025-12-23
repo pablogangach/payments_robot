@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from app.models.payment import PaymentProvider
+from payments_service.app.models.payment import PaymentProvider
 
 
 class FeeStructure(BaseModel):

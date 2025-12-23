@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-from app.models.payment import Payment, PaymentCreate
-from app.services.payment_service import PaymentService, get_payment_service
+from fastapi import APIRouter, HTTPException, Depends
+from payments_service.app.models.payment import Payment, PaymentCreate
+from payments_service.app.services.payment_service import PaymentService, get_payment_service
 
 router = APIRouter()
 

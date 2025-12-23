@@ -1,8 +1,8 @@
 import uuid
 from typing import Dict, List
 from datetime import datetime, timezone
-from app.models.payment import Payment, PaymentCreate, PaymentStatus, PaymentProvider
-from app.models.fees import FeeStructure
+from payments_service.app.models.payment import Payment, PaymentCreate, PaymentStatus, PaymentProvider
+from payments_service.app.models.fees import FeeStructure
 
 import aisuite
 import json
