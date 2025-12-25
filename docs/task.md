@@ -17,7 +17,7 @@
     - [x] Implement Repository <!-- id: 18 -->
     - [x] Implement Service <!-- id: 19 -->
     - [x] Implement API Endpoint (`POST /customers`) <!-- id: 20 -->
-- [/] Commit and Push Phase 2 Changes <!-- id: 21 -->
-    - [ ] Add all changes <!-- id: 22 -->
-    - [ ] Commit with descriptive message <!-- id: 23 -->
-    - [ ] Push to remote <!-- id: 24 -->
+- [x] Commit and Push Phase 2 Changes <!-- id: 21 -->
+    - [x] Add all changes <!-- id: 22 -->
+    - [x] Commit with descriptive message <!-- id: 23 -->
+    - [x] Push to remote <!-- id: 24 -->
