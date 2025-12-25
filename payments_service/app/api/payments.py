@@ -1,43 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
-from fastapi import APIRouter, HTTPException, Depends
 from payments_service.app.models.payment import Payment, PaymentCreate
-from payments_service.app.services.payment_service import PaymentService, get_payment_service
+from payments_service.app.services.payment_service import PaymentService
+from payments_service.app.api.dependencies import get_payment_service
 
 router = APIRouter()
 
-@router.post("", response_model=Payment, status_code=201)
-def create_payment(payment_create: PaymentCreate, service: PaymentService = Depends(get_payment_service)):
-    return service.create_payment(payment_create)
+@router.post("/charges", response_model=Payment, status_code=status.HTTP_201_CREATED)
+def create_charge(
+    charge_in: PaymentCreate,
+    service: PaymentService = Depends(get_payment_service)
+):
+    try:
+        return service.create_charge(charge_in)
+    except KeyError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("", response_model=List[Payment])
-def get_all_payments(service: PaymentService = Depends(get_payment_service)):
-    return service.get_all_payments()
+@router.get("/charges/{charge_id}", response_model=Payment)
+def get_charge(
+    charge_id: str,
+    service: PaymentService = Depends(get_payment_service)
+):
+    try:
+        return service.get_payment(charge_id)
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Charge not found")
 
-@router.get("/{payment_id}", response_model=Payment)
-def get_payment(payment_id: str, service: PaymentService = Depends(get_payment_service)):
-    payment = service.get_payment(payment_id)
-    if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
-    return payment
-
-@router.post("/{payment_id}/authorize", response_model=Payment)
-def authorize_payment(payment_id: str, service: PaymentService = Depends(get_payment_service)):
-    payment = service.authorize_payment(payment_id)
-    if not payment:
-        raise HTTPException(status_code=400, detail="Payment could not be authorized. Check ID and status.")
-    return payment
-
-@router.post("/{payment_id}/settle", response_model=Payment)
-def settle_payment(payment_id: str, service: PaymentService = Depends(get_payment_service)):
-    payment = service.settle_payment(payment_id)
-    if not payment:
-        raise HTTPException(status_code=400, detail="Payment could not be settled. Check ID and status.")
-    return payment
-
-@router.post("/{payment_id}/cancel", response_model=Payment)
-def cancel_payment(payment_id: str, service: PaymentService = Depends(get_payment_service)):
-    payment = service.cancel_payment(payment_id)
-    if not payment:
-        raise HTTPException(status_code=400, detail="Payment could not be cancelled. Check ID and status.")
-    return payment
+@router.get("/charges", response_model=List[Payment])
+def list_charges(
+    service: PaymentService = Depends(get_payment_service)
+):
+    # This would typically be filtered by merchant_id in a real app
+    return service.payment_repo.find_all()

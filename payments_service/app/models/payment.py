@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
+import uuid
 
 class PaymentStatus(str, Enum):
     PENDING = "pending"
@@ -14,19 +15,25 @@ class PaymentProvider(str, Enum):
     STRIPE = "stripe"
     INTERNAL = "internal" # For testing or other providers
 
+import uuid
+
 class Payment(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    merchant_id: str
+    customer_id: str
     amount: float
     currency: str
     description: Optional[str] = None
     status: PaymentStatus = PaymentStatus.PENDING
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     provider: Optional[PaymentProvider] = None
     provider_payment_id: Optional[str] = None
+    routing_decision: Optional[str] = None
 
 class PaymentCreate(BaseModel):
+    merchant_id: str
+    customer_id: str
     amount: float
     currency: str
-    provider: Optional[PaymentProvider] = None
     description: str = "Default Payment Description"
