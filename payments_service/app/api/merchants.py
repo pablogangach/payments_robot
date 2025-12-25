@@ -1,17 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from payments_service.app.models.merchant import Merchant, MerchantCreate
 from payments_service.app.services.merchant_service import MerchantService
-from payments_service.app.repositories.merchant_repository import MerchantRepository
+from payments_service.app.api.dependencies import get_merchant_service
 
 router = APIRouter()
-
-# Dependency Injection (Simple for now)
-# In production, use a proper container
-_merchant_repo = MerchantRepository()
-_merchant_service = MerchantService(_merchant_repo)
-
-def get_merchant_service():
-    return _merchant_service
 
 @router.post("/merchants", response_model=Merchant, status_code=status.HTTP_201_CREATED)
 def create_merchant(
