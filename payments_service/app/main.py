@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from payments_service.app.api import payments, merchants, customers
+from payments_service.app.core.api import payments, merchants, customers
 from dotenv import load_dotenv
 
 app = FastAPI(title="Payments Service")

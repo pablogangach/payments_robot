@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
-from payments_service.app.api import payments, merchants, customers
+from payments_service.app.core.api import payments, merchants, customers
 import json
 
 app = FastAPI(title="Payments Service")

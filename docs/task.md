@@ -1,11 +1,20 @@
+# Tasks
+
+- [/] Phase 6: Refactor to Tripartite Architecture <!-- id: 48 -->
+    - [/] Move Routing System files <!-- id: 49 -->
+    - [ ] Move Processing System files <!-- id: 50 -->
+    - [ ] Move Core System files <!-- id: 51 -->
+    - [ ] Update Imports and Dependencies <!-- id: 52 -->
+    - [ ] Verify Architectural Refactor <!-- id: 53 -->
+
 - [x] Phase 5: Implement Processor Registry Abstraction <!-- id: 40 -->
     - [x] Create ProcessorRegistry class <!-- id: 41 -->
     - [x] Update dependencies to use Registry <!-- id: 42 -->
     - [x] Refactor PaymentService to use Registry <!-- id: 43 -->
-- [/] Commit and Push Phase 5 Changes <!-- id: 44 -->
-    - [ ] Add all changes <!-- id: 45 -->
-    - [ ] Commit with descriptive message <!-- id: 46 -->
-    - [ ] Push to remote <!-- id: 47 -->
+- [x] Commit and Push Phase 5 Changes <!-- id: 44 -->
+    - [x] Add all changes <!-- id: 45 -->
+    - [x] Commit with descriptive message <!-- id: 46 -->
+    - [x] Push to remote <!-- id: 47 -->
 
 - [x] Phase 4: Define Payment Execution Contract <!-- id: 35 -->
     - [x] Create Gateway Models (Request/Response Abstraction) <!-- id: 36 -->
