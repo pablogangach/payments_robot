@@ -1,4 +1,8 @@
-# Tasks
+- [x] Phase 4: Define Payment Execution Contract <!-- id: 35 -->
+    - [x] Create Gateway Models (Request/Response Abstraction) <!-- id: 36 -->
+    - [x] Define PaymentProcessor Interface <!-- id: 37 -->
+    - [x] Implement Processor Adapters (Stripe, Internal/Mock) <!-- id: 38 -->
+    - [x] Refactor PaymentService to use Gateway Abstraction <!-- id: 39 -->
 
 - [x] Phase 1: Implement Merchant Vertical <!-- id: 5 -->
     - [x] Write API Tests (Create, Get, Errors) <!-- id: 6 -->
@@ -6,7 +10,7 @@
     - [x] Implement Repository (In-Memory) <!-- id: 8 -->
     - [x] Implement Service (Onboarding Logic) <!-- id: 9 -->
     - [x] Implement API Endpoint (`POST /merchants`) <!-- id: 10 -->
-- [ ] Commit and Push Changes <!-- id: 11 -->
+- [x] Commit and Push Changes <!-- id: 11 -->
     - [x] Add all changes <!-- id: 12 -->
     - [x] Comit with descriptive message <!-- id: 13 -->
     - [x] Push to remote <!-- id: 14 -->
@@ -21,3 +25,14 @@
     - [x] Add all changes <!-- id: 22 -->
     - [x] Commit with descriptive message <!-- id: 23 -->
     - [x] Push to remote <!-- id: 24 -->
+
+- [x] Phase 3: Implement Charges Vertical (The Aggregator) <!-- id: 25 -->
+    - [x] Write API Tests (Create Charge) <!-- id: 26 -->
+    - [x] Update Models (Link Payment to Customer/Merchant) <!-- id: 27 -->
+    - [x] Update PaymentService (Aggregator Logic) <!-- id: 28 -->
+    - [x] Implement API Endpoint (`POST /charges`) <!-- id: 29 -->
+    - [x] Verify End-to-End Flow <!-- id: 30 -->
+- [x] Commit and Push Phase 3 Changes <!-- id: 31 -->
+    - [x] Add all changes <!-- id: 32 -->
+    - [x] Commit with descriptive message <!-- id: 33 -->
+    - [x] Push to remote <!-- id: 34 -->

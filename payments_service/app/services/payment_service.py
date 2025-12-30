@@ -1,4 +1,6 @@
+from typing import Dict, List
 from datetime import datetime, timezone
+from payments_service.app.gateways.base import PaymentProcessor
 from payments_service.app.models.payment import Payment, PaymentCreate, PaymentStatus
 from payments_service.app.repositories.payment_repository import PaymentRepository
 from payments_service.app.repositories.merchant_repository import MerchantRepository
@@ -11,47 +13,61 @@ class PaymentService:
         payment_repo: PaymentRepository, 
         merchant_repo: MerchantRepository, 
         customer_repo: CustomerRepository,
-        routing_service: RoutingService
+        routing_service: RoutingService,
+        processors: Dict[str, PaymentProcessor]
     ):
         self.payment_repo = payment_repo
         self.merchant_repo = merchant_repo
         self.customer_repo = customer_repo
         self.routing_service = routing_service
+        self.processors = processors
 
     def create_charge(self, charge_in: PaymentCreate) -> Payment:
-        # 1. Validate Merchant
+        # 1. Validate Entities
         merchant = self.merchant_repo.find_by_id(charge_in.merchant_id)
         if not merchant:
             raise KeyError(f"Merchant {charge_in.merchant_id} not found")
 
-        # 2. Validate Customer
         customer = self.customer_repo.find_by_id(charge_in.customer_id)
         if not customer:
             raise KeyError(f"Customer {charge_in.customer_id} not found")
 
-        # 3. Routing Decision (Simplified for E2E visualization)
-        # In a real flow, this would call the Routing Engine
+        # 2. Routing Decision
         try:
-            provider = self.routing_service.find_best_route(charge_in)
+            provider_type = self.routing_service.find_best_route(charge_in)
             reason = "AI Routing Decision"
         except Exception:
             from payments_service.app.models.payment import PaymentProvider
-            provider = PaymentProvider.STRIPE
+            provider_type = PaymentProvider.STRIPE
             reason = "Fallback: Routing Engine Unavailable"
 
-        # 4. Create Payment Record
-        payment = Payment(
-            **charge_in.model_dump(),
-            provider=provider,
-            routing_decision=reason,
-            status=PaymentStatus.PENDING # Usually pending until processor confirms
+        # 3. Get Processor Adapter
+        processor = self.processors.get(provider_type.value)
+        if not processor:
+            raise ValueError(f"No processor registered for {provider_type}")
+
+        # 4. Standardized Execution Contract
+        from payments_service.app.models.gateway import InternalChargeRequest
+        internal_req = InternalChargeRequest(
+            amount=charge_in.amount,
+            currency=charge_in.currency,
+            payment_method_token=customer.payment_method_token,
+            merchant_id=charge_in.merchant_id,
+            customer_id=charge_in.customer_id,
+            description=charge_in.description
         )
         
-        # 5. Execute with Provider (Simulation)
-        # if provider == STRIPE: stripe.PaymentIntent.create(...)
-        # For this vertical slice, we simulate immediate success
-        payment.status = PaymentStatus.COMPLETED
-        payment.updated_at = datetime.now(timezone.utc)
+        processor_resp = processor.process_charge(internal_req)
+
+        # 5. Map Result to Payment Record
+        payment = Payment(
+            **charge_in.model_dump(),
+            provider=provider_type,
+            routing_decision=reason,
+            status=PaymentStatus.COMPLETED if processor_resp.status == "success" else PaymentStatus.FAILED,
+            provider_payment_id=processor_resp.processor_transaction_id,
+            updated_at=datetime.now(timezone.utc)
+        )
 
         return self.payment_repo.save(payment)
 

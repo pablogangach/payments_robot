@@ -13,6 +13,8 @@ class PaymentStatus(str, Enum):
 
 class PaymentProvider(str, Enum):
     STRIPE = "stripe"
+    ADYEN = "adyen"
+    BRAINTREE = "braintree"
     INTERNAL = "internal" # For testing or other providers
 
 import uuid
