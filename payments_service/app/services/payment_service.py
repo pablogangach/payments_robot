@@ -7,6 +7,8 @@ from payments_service.app.repositories.merchant_repository import MerchantReposi
 from payments_service.app.repositories.customer_repository import CustomerRepository
 from payments_service.app.services.routing_service import RoutingService
 
+from payments_service.app.gateways.registry import ProcessorRegistry
+
 class PaymentService:
     def __init__(
         self, 
@@ -14,13 +16,13 @@ class PaymentService:
         merchant_repo: MerchantRepository, 
         customer_repo: CustomerRepository,
         routing_service: RoutingService,
-        processors: Dict[str, PaymentProcessor]
+        processor_registry: ProcessorRegistry
     ):
         self.payment_repo = payment_repo
         self.merchant_repo = merchant_repo
         self.customer_repo = customer_repo
         self.routing_service = routing_service
-        self.processors = processors
+        self.processor_registry = processor_registry
 
     def create_charge(self, charge_in: PaymentCreate) -> Payment:
         # 1. Validate Entities
@@ -42,7 +44,7 @@ class PaymentService:
             reason = "Fallback: Routing Engine Unavailable"
 
         # 3. Get Processor Adapter
-        processor = self.processors.get(provider_type.value)
+        processor = self.processor_registry.get_processor(provider_type)
         if not processor:
             raise ValueError(f"No processor registered for {provider_type}")
 

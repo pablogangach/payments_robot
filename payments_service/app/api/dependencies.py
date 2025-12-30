@@ -12,18 +12,20 @@ from payments_service.app.gateways.adyen_adapter import AdyenProcessor
 from payments_service.app.gateways.braintree_adapter import BraintreeProcessor
 from payments_service.app.gateways.internal_mock_adapter import InternalMockProcessor
 
+from payments_service.app.gateways.registry import ProcessorRegistry
+from payments_service.app.models.payment import PaymentProvider
+
 # Singletons for in-memory persistence
 merchant_repo = MerchantRepository()
 customer_repo = CustomerRepository()
 payment_repo = PaymentRepository()
 
-# Processors
-processors = {
-    "stripe": StripeProcessor(),
-    "adyen": AdyenProcessor(),
-    "braintree": BraintreeProcessor(),
-    "internal": InternalMockProcessor()
-}
+# Processors Registration
+processor_registry = ProcessorRegistry()
+processor_registry.register(PaymentProvider.STRIPE, StripeProcessor())
+processor_registry.register(PaymentProvider.ADYEN, AdyenProcessor())
+processor_registry.register(PaymentProvider.BRAINTREE, BraintreeProcessor())
+processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
 # Services
 fee_service = FeeService()
@@ -36,7 +38,7 @@ payment_service = PaymentService(
     merchant_repo=merchant_repo,
     customer_repo=customer_repo,
     routing_service=routing_service,
-    processors=processors
+    processor_registry=processor_registry
 )
 
 def get_payment_service():
