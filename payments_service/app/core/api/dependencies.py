@@ -16,10 +16,15 @@ from payments_service.app.processors.adapters.internal_mock_adapter import Inter
 from payments_service.app.processors.registry import ProcessorRegistry
 from payments_service.app.core.models.payment import PaymentProvider
 
+from payments_service.app.routing.repositories.performance_repository import RoutingPerformanceRepository
+from payments_service.app.routing.services.ingestion_service import DataIngestor
+from payments_service.app.routing.services.intelligence_strategies import StaticAggregationStrategy
+
 # Singletons for in-memory persistence
 merchant_repo = MerchantRepository()
 customer_repo = CustomerRepository()
 payment_repo = PaymentRepository()
+performance_repo = RoutingPerformanceRepository()
 
 # Processors Registration
 processor_registry = ProcessorRegistry()
@@ -30,7 +35,11 @@ processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
 # Services
 fee_service = FeeService()
-routing_service = RoutingService(fee_service=fee_service)
+routing_service = RoutingService(fee_service=fee_service, performance_repository=performance_repo)
+
+# Ingestion
+intelligence_strategy = StaticAggregationStrategy()
+data_ingestor = DataIngestor(performance_repo, intelligence_strategy)
 
 merchant_service = MerchantService(merchant_repo)
 customer_service = CustomerService(customer_repo, merchant_repo)

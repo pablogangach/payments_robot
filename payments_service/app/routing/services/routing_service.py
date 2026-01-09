@@ -7,48 +7,58 @@ from payments_service.app.routing.services.fee_service import FeeService
 
 
 class RoutingService:
-    def __init__(self, fee_service: FeeService):
+    def __init__(self, fee_service: FeeService, performance_repository: 'RoutingPerformanceRepository'):
         self.fee_service = fee_service
+        self.performance_repository = performance_repository
         self.client = aisuite.Client()
 
     def find_best_route(self, payment_create: PaymentCreate) -> PaymentProvider:
         """
-        Uses an LLM to determine the best payment provider based on cost.
+        Uses an LLM to determine the best payment provider based on cost and performance.
         """
-        # If a provider is explicitly passed in the request, use it.
-        # This is useful for testing or forcing a specific provider.
         if payment_create.provider:
             print(f"Forcing provider '{payment_create.provider.value}' as per request.")
             return payment_create.provider
 
+        # 1. Gather context
         all_fees = self.fee_service.get_all_fees()
+        all_performance = self.performance_repository.get_all()
+        
         fees_json = json.dumps([fee.model_dump() for fee in all_fees])
+        perf_json = json.dumps([p.model_dump() for p in all_performance], default=str)
         payment_json = payment_create.model_dump_json()
 
         prompt = f"""
-        You are an expert in payment processing, specializing in Least Cost Routing.
-        Your task is to find the most cost-effective payment provider for a given transaction.
+        You are an expert in payment processing, specializing in Intelligent Routing.
+        Your task is to find the best payment provider for a given transaction by balancing cost and performance.
 
-        Here is the list of available fee structures from our providers:
+        --- AVAILABLE DATA ---
+        
+        STATIC FEE STRUCTURES:
         {fees_json}
 
-        Here is the incoming payment request:
+        REAL-TIME PERFORMANCE METRICS (by Dimension):
+        {perf_json}
+
+        INCOMING PAYMENT REQUEST:
         {payment_json}
 
-        Analyze the fee structures and the payment details. Calculate the total fee for each provider.
-        The fee is calculated as: (amount * (variable_fee_percent / 100)) + fixed_fee.
-        Consider the most specific rule that applies (e.g., a 'domestic' rule is better than a 'default' one for a domestic payment).
-
-        Based on your analysis, which provider offers the lowest total fee for this transaction?
-
+        --- YOUR OBJECTIVE ---
+        
+        Analyze the fee structures AND the real-time performance data (auth_rate, latency).
+        
+        1. Identify the providers that match the transaction's dimension (currency, region, etc.).
+        2. Calculate the total fee for each candidate.
+        3. Weight the cost against the performance. If a provider is slightly more expensive but has a significantly higher auth_rate, it might be the better choice.
+        
         Return ONLY the provider's name in a JSON object, like this:
-        {{"best_provider": "stripe"}}
+        {{"best_provider": "stripe", "reasoning": "Higher auth rate for domestic Visa cards vs competitors."}}
         """
 
         completion = self.client.chat.completions.create(
             model="openai:gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that follows instructions precisely."},
+                {"role": "system", "content": "You are a precise routing engine."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"}

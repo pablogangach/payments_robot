@@ -13,6 +13,7 @@ class RoutingDimension(BaseModel):
     Represents the specific slice of traffic context for looking up performance data.
     """
     payment_method_type: str  # e.g., "credit_card"
+    payment_form: str = "card_on_file" # e.g., "card_on_file", "apple_pay", "google_pay"
     network: str = "unknown" # e.g., "visa", "mastercard"
     card_type: str = "unknown" # e.g., "credit", "debit"
     region: str = "domestic" # e.g., "domestic", "international"

@@ -46,6 +46,7 @@ class PreprocessingService:
         # TODO: Map real card details (bin lookup) to network/type. Hardcoded for now.
         dimension = RoutingDimension(
             payment_method_type=context.payment_method.type,
+            payment_form="card_on_file", # Placeholder mapping
             network="visa", # Placeholder mapping
             card_type="credit", # Placeholder mapping
             region="domestic", # Placeholder mapping
