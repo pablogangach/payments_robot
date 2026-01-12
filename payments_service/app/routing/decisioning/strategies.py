@@ -1,13 +1,13 @@
 from typing import List, Dict
 from collections import defaultdict
-from payments_service.app.routing.models.ingestion import RawTransactionRecord
-from payments_service.app.routing.models.routing_data import (
+from ..ingestion.models import RawTransactionRecord
+from .models import (
     ProviderPerformance, 
     RoutingDimension, 
     PerformanceMetrics,
     CostStructure
 )
-from payments_service.app.routing.interfaces import IntelligenceStrategy
+from .interfaces import IntelligenceStrategy
 
 class StaticAggregationStrategy(IntelligenceStrategy):
     """

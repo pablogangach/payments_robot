@@ -5,8 +5,9 @@ from payments_service.app.core.services.merchant_service import MerchantService
 from payments_service.app.core.services.customer_service import CustomerService
 from payments_service.app.core.services.payment_service import PaymentService
 
-from payments_service.app.routing.services.routing_service import RoutingService
-from payments_service.app.routing.services.fee_service import FeeService
+from payments_service.app.routing.preprocessing import RoutingService, FeeService
+from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
+from payments_service.app.routing.ingestion import DataIngestor
 
 from payments_service.app.processors.adapters.stripe_adapter import StripeProcessor
 from payments_service.app.processors.adapters.adyen_adapter import AdyenProcessor
@@ -15,10 +16,6 @@ from payments_service.app.processors.adapters.internal_mock_adapter import Inter
 
 from payments_service.app.processors.registry import ProcessorRegistry
 from payments_service.app.core.models.payment import PaymentProvider
-
-from payments_service.app.routing.repositories.performance_repository import RoutingPerformanceRepository
-from payments_service.app.routing.services.ingestion_service import DataIngestor
-from payments_service.app.routing.services.intelligence_strategies import StaticAggregationStrategy
 
 # Singletons for in-memory persistence
 merchant_repo = MerchantRepository()

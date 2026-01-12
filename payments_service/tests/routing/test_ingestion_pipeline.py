@@ -2,11 +2,8 @@ import pytest
 from datetime import datetime, timedelta
 from typing import List, Any
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.routing.models.ingestion import RawTransactionRecord
-from payments_service.app.routing.interfaces import DataProvider
-from payments_service.app.routing.repositories.performance_repository import RoutingPerformanceRepository
-from payments_service.app.routing.services.intelligence_strategies import StaticAggregationStrategy
-from payments_service.app.routing.services.ingestion_service import DataIngestor
+from payments_service.app.routing.ingestion import RawTransactionRecord, DataProvider, DataIngestor
+from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
 
 class MockJsonDataProvider(DataProvider):
     """

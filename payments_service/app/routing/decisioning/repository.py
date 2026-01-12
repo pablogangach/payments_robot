@@ -1,5 +1,5 @@
 from typing import List, Optional
-from payments_service.app.routing.models.routing_data import ProviderPerformance, RoutingDimension
+from .models import ProviderPerformance, RoutingDimension
 
 class RoutingPerformanceRepository:
     """

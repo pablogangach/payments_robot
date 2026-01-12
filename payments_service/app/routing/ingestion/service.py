@@ -1,7 +1,8 @@
 from typing import List, Any
-from payments_service.app.routing.models.ingestion import RawTransactionRecord
-from payments_service.app.routing.interfaces import DataProvider, IntelligenceStrategy
-from payments_service.app.routing.repositories.performance_repository import RoutingPerformanceRepository
+from .models import RawTransactionRecord
+from .interfaces import DataProvider
+from ..decisioning.interfaces import IntelligenceStrategy
+from ..decisioning.repository import RoutingPerformanceRepository
 
 class DataIngestor:
     """

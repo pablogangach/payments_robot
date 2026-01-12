@@ -6,7 +6,7 @@ from payments_service.app.core.models.merchant import Merchant, MerchantCreate
 from payments_service.app.core.repositories.payment_repository import PaymentRepository
 from payments_service.app.core.repositories.merchant_repository import MerchantRepository
 from payments_service.app.core.repositories.customer_repository import CustomerRepository
-from payments_service.app.routing.services.routing_service import RoutingService
+from payments_service.app.routing.preprocessing import RoutingService
 
 from payments_service.app.processors.registry import ProcessorRegistry
 

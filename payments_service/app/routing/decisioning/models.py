@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from payments_service.app.core.models.payment import PaymentProvider
 
 class RoutingStrategy(str, Enum):
