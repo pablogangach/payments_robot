@@ -1,0 +1,4 @@
+id,amount,currency,fee,net,type,created,card_brand,card_country,status
+bt_1,100.00,usd,2.90,97.10,charge,2026-01-11 10:00:00,Visa,US,available
+bt_2,50.00,usd,1.75,48.25,charge,2026-01-11 10:05:00,Mastercard,US,available
+bt_3,200.00,usd,6.10,193.90,charge,2026-01-11 10:10:00,Visa,UK,available

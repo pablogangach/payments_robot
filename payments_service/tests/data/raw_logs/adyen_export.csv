@@ -1,0 +1,4 @@
+Merchant Reference,PSP Reference,Payment Method,Creation Date,Type,Currency,Gross Debit,Commission,Status
+ref_111,psp_1,visa,2026-01-11 09:00:00,Settled,USD,100.00,0.30,booked
+ref_112,psp_2,mc,2026-01-11 09:15:00,Settled,USD,50.00,0.25,booked
+ref_113,psp_3,visa,2026-01-11 09:30:00,Refund,USD,20.00,0.10,booked
