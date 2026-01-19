@@ -16,12 +16,16 @@ from payments_service.app.processors.adapters.internal_mock_adapter import Inter
 
 from payments_service.app.processors.registry import ProcessorRegistry
 from payments_service.app.core.models.payment import PaymentProvider
+from payments_service.app.core.repositories.datastore import InMemoryDataStore
 
 # Singletons for in-memory persistence
-merchant_repo = MerchantRepository()
-customer_repo = CustomerRepository()
-payment_repo = PaymentRepository()
-performance_repo = RoutingPerformanceRepository()
+# We use a single store for simplicity in this version, but repositories could have separate ones.
+store = InMemoryDataStore()
+
+merchant_repo = MerchantRepository(store)
+customer_repo = CustomerRepository(store)
+payment_repo = PaymentRepository(store)
+performance_repo = RoutingPerformanceRepository(store)
 
 # Processors Registration
 processor_registry = ProcessorRegistry()

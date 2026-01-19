@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime, timezone
 from payments_service.app.processors.interfaces import PaymentProcessor
 from payments_service.app.core.models.payment import Payment, PaymentCreate, PaymentStatus
@@ -17,13 +17,15 @@ class PaymentService:
         merchant_repo: MerchantRepository, 
         customer_repo: CustomerRepository,
         routing_service: RoutingService,
-        processor_registry: ProcessorRegistry
+        processor_registry: ProcessorRegistry,
+        feedback_collector: Optional['FeedbackCollector'] = None
     ):
         self.payment_repo = payment_repo
         self.merchant_repo = merchant_repo
         self.customer_repo = customer_repo
         self.routing_service = routing_service
         self.processor_registry = processor_registry
+        self.feedback_collector = feedback_collector
 
     def create_charge(self, charge_in: PaymentCreate) -> Payment:
         # 1. Validate Entities
@@ -72,7 +74,13 @@ class PaymentService:
             updated_at=datetime.now(timezone.utc)
         )
 
-        return self.payment_repo.save(payment)
+        saved_payment = self.payment_repo.save(payment)
+
+        # 6. Feedback Loop
+        if self.feedback_collector:
+            self.feedback_collector.collect(saved_payment)
+
+        return saved_payment
 
     def get_payment(self, payment_id: str) -> Payment:
         payment = self.payment_repo.find_by_id(payment_id)

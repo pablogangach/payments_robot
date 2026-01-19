@@ -1,12 +1,13 @@
 import pytest
-from app.repositories.performance_repository import RoutingPerformanceRepository
-from app.models.routing_data import RoutingDimension, ProviderPerformance, PerformanceMetrics, CostStructure
-from app.models.payment import PaymentProvider
+from payments_service.app.routing.decisioning.repository import RoutingPerformanceRepository
+from payments_service.app.routing.decisioning.models import RoutingDimension, ProviderPerformance, PerformanceMetrics, CostStructure
+from payments_service.app.core.models.payment import PaymentProvider
+from payments_service.app.core.repositories.datastore import InMemoryDataStore
 
 def test_find_by_dimension_exact_match():
-    repo = RoutingPerformanceRepository()
+    store = InMemoryDataStore()
+    repo = RoutingPerformanceRepository(store)
     
-    # Use the dimension we know exists from mock data
     dim = RoutingDimension(
         payment_method_type="credit_card",
         network="visa",
@@ -15,6 +16,15 @@ def test_find_by_dimension_exact_match():
         currency="USD",
         is_network_tokenized=False
     )
+    
+    metrics = PerformanceMetrics(
+        auth_rate=0.9, fraud_rate=0.01, avg_latency_ms=200,
+        cost_structure=CostStructure(variable_fee_percent=2.9, fixed_fee=0.3)
+    )
+    
+    # Save 2 records for different providers
+    repo.save(ProviderPerformance(provider=PaymentProvider.STRIPE, dimension=dim, metrics=metrics))
+    repo.save(ProviderPerformance(provider=PaymentProvider.INTERNAL, dimension=dim, metrics=metrics))
     
     results = repo.find_by_dimension(dim)
     
@@ -25,7 +35,8 @@ def test_find_by_dimension_exact_match():
     assert PaymentProvider.INTERNAL in providers
 
 def test_find_by_dimension_no_match():
-    repo = RoutingPerformanceRepository()
+    store = InMemoryDataStore()
+    repo = RoutingPerformanceRepository(store)
     
     # Dimension that doesn't exist
     dim = RoutingDimension(
@@ -39,7 +50,8 @@ def test_find_by_dimension_no_match():
     assert len(results) == 0
 
 def test_save_performance():
-    repo = RoutingPerformanceRepository()
+    store = InMemoryDataStore()
+    repo = RoutingPerformanceRepository(store)
     
     dim = RoutingDimension(
         payment_method_type="bank_transfer",
