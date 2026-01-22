@@ -66,7 +66,7 @@ class PaymentService:
 
         # 5. Map Result to Payment Record
         payment = Payment(
-            **charge_in.model_dump(),
+            **charge_in.model_dump(exclude={'provider'}),
             provider=provider_type,
             routing_decision=reason,
             status=PaymentStatus.COMPLETED if processor_resp.status == "success" else PaymentStatus.FAILED,

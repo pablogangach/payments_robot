@@ -7,6 +7,7 @@ from payments_service.app.core.services.payment_service import PaymentService
 
 from payments_service.app.routing.preprocessing import RoutingService, FeeService
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
+from payments_service.app.routing.decisioning.decision_strategies import LLMDecisionStrategy, DeterministicLeastCostStrategy
 from payments_service.app.routing.ingestion import DataIngestor
 
 from payments_service.app.processors.adapters.stripe_adapter import StripeProcessor
@@ -36,7 +37,12 @@ processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
 # Services
 fee_service = FeeService()
-routing_service = RoutingService(fee_service=fee_service, performance_repository=performance_repo)
+routing_strategy = LLMDecisionStrategy(objective="balanced")
+routing_service = RoutingService(
+    fee_service=fee_service, 
+    performance_repository=performance_repo,
+    strategy=routing_strategy
+)
 
 # Ingestion
 intelligence_strategy = StaticAggregationStrategy()

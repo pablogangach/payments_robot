@@ -39,3 +39,4 @@ class PaymentCreate(BaseModel):
     amount: float
     currency: str
     description: str = "Default Payment Description"
+    provider: Optional[PaymentProvider] = None

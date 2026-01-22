@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 import aisuite
 from payments_service.app.core.models.payment import PaymentCreate, PaymentProvider, PaymentProvider
 from .models import (
@@ -47,15 +47,24 @@ class FeeService:
     def get_all_fees(self) -> List[FeeStructure]:
         return self.fees
 
+from ..decisioning.interfaces import RoutingDecisionStrategy
+from ..decisioning.decision_strategies import LLMDecisionStrategy
+
 class RoutingService:
-    def __init__(self, fee_service: FeeService, performance_repository: RoutingPerformanceRepository):
+    def __init__(
+        self, 
+        fee_service: FeeService, 
+        performance_repository: RoutingPerformanceRepository,
+        strategy: Optional[RoutingDecisionStrategy] = None
+    ):
         self.fee_service = fee_service
         self.performance_repository = performance_repository
-        self.client = aisuite.Client()
+        # Default to LLM strategy if none provided
+        self.strategy = strategy or LLMDecisionStrategy()
 
     def find_best_route(self, payment_create: PaymentCreate) -> PaymentProvider:
         """
-        Uses an LLM to determine the best payment provider based on cost and performance.
+        Uses the injected strategy to determine the best payment provider.
         """
         if payment_create.provider:
             return payment_create.provider
@@ -64,37 +73,15 @@ class RoutingService:
         all_fees = self.fee_service.get_all_fees()
         all_performance = self.performance_repository.get_all()
         
-        fees_json = json.dumps([fee.model_dump() for fee in all_fees])
-        perf_json = json.dumps([p.model_dump() for p in all_performance], default=str)
-        payment_json = payment_create.model_dump_json()
-
-        prompt = f"""
-        You are an expert in payment processing, specializing in Intelligent Routing.
-        Your task is to find the best payment provider for a given transaction by balancing cost and performance.
-
-        --- AVAILABLE DATA ---
-        STATIC FEE STRUCTURES: {fees_json}
-        REAL-TIME PERFORMANCE METRICS: {perf_json}
-        INCOMING PAYMENT REQUEST: {payment_json}
-
-        --- YOUR OBJECTIVE ---
-        Analyze the data. Weight the cost against the performance (auth_rate, latency).
-        Return ONLY the provider's name in a JSON object: {{"best_provider": "stripe", "reasoning": "..."}}
-        """
-
-        completion = self.client.chat.completions.create(
-            model="openai:gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a precise routing engine."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"}
+        # 2. Delegate to strategy
+        provider = self.strategy.decide(
+            payment_in=payment_create,
+            performance_data=all_performance,
+            fees=all_fees
         )
-
-        response_data = json.loads(completion.choices[0].message.content or "{}")
-        provider_name = response_data.get("best_provider", PaymentProvider.INTERNAL.value)
-        print(f"AI Routing Decision: Chose '{provider_name}'")
-        return PaymentProvider(provider_name)
+        
+        print(f"Routing Decision: Strategy {self.strategy.__class__.__name__} chose '{provider.value}'")
+        return provider
 
 class PreprocessingService:
     """
