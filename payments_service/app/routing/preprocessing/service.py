@@ -1,6 +1,9 @@
 import json
 from typing import List, Optional
-import aisuite
+try:
+    import aisuite
+except ImportError:
+    pass
 from payments_service.app.core.models.payment import PaymentCreate, PaymentProvider, PaymentProvider
 from .models import (
     FeeStructure, 
@@ -48,7 +51,7 @@ class FeeService:
         return self.fees
 
 from ..decisioning.interfaces import RoutingDecisionStrategy
-from ..decisioning.decision_strategies import LLMDecisionStrategy
+from ..decisioning.decision_strategies import LLMDecisionStrategy, DeterministicLeastCostStrategy
 
 class RoutingService:
     def __init__(
@@ -59,8 +62,8 @@ class RoutingService:
     ):
         self.fee_service = fee_service
         self.performance_repository = performance_repository
-        # Default to LLM strategy if none provided
-        self.strategy = strategy or LLMDecisionStrategy()
+        # Default to Least Cost strategy if none provided (more robust than LLM for base setup)
+        self.strategy = strategy or DeterministicLeastCostStrategy()
 
     def find_best_route(self, payment_create: PaymentCreate) -> PaymentProvider:
         """

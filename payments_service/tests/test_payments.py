@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from payments_service.app.main import app
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.core.api.dependencies import get_payment_service, store, merchant_repo, customer_repo
+from payments_service.app.core.api.dependencies import get_payment_service, merchant_store, customer_store, payment_store, intelligence_store, merchant_repo, customer_repo
 from payments_service.app.core.models.merchant import Merchant
 from payments_service.app.core.models.customer import Customer
 from unittest.mock import patch
@@ -11,10 +11,13 @@ from unittest.mock import patch
 def client():
     """
     Provides a test client for the FastAPI application.
-    Clears the in-memory store before each test.
+    Clears the in-memory stores before each test.
     """
-    # Clear the underlying store
-    store._data.clear()
+    # Clear the underlying stores
+    merchant_store._data.clear()
+    customer_store._data.clear()
+    payment_store._data.clear()
+    intelligence_store._data.clear()
     
     # Pre-populate a merchant and customer for testing
     m = Merchant(

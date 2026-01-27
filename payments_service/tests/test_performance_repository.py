@@ -2,10 +2,10 @@ import pytest
 from payments_service.app.routing.decisioning.repository import RoutingPerformanceRepository
 from payments_service.app.routing.decisioning.models import RoutingDimension, ProviderPerformance, PerformanceMetrics, CostStructure
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.core.repositories.datastore import InMemoryDataStore
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 
 def test_find_by_dimension_exact_match():
-    store = InMemoryDataStore()
+    store = InMemoryKeyValueStore()
     repo = RoutingPerformanceRepository(store)
     
     dim = RoutingDimension(
@@ -35,7 +35,7 @@ def test_find_by_dimension_exact_match():
     assert PaymentProvider.INTERNAL in providers
 
 def test_find_by_dimension_no_match():
-    store = InMemoryDataStore()
+    store = InMemoryKeyValueStore()
     repo = RoutingPerformanceRepository(store)
     
     # Dimension that doesn't exist
@@ -50,7 +50,7 @@ def test_find_by_dimension_no_match():
     assert len(results) == 0
 
 def test_save_performance():
-    store = InMemoryDataStore()
+    store = InMemoryKeyValueStore()
     repo = RoutingPerformanceRepository(store)
     
     dim = RoutingDimension(

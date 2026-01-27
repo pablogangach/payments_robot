@@ -13,7 +13,7 @@ from payments_service.app.routing.decisioning import (
     RoutingPerformanceRepository, 
     StaticAggregationStrategy
 )
-from payments_service.app.core.repositories.datastore import InMemoryDataStore
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 
 def test_feedback_collector_mapping():
     # Setup
@@ -47,7 +47,7 @@ def test_full_feedback_loop_to_repository():
     collector = LocalFeedbackCollector(store)
     feedback_provider = InternalFeedbackDataProvider(store)
     
-    repo_store = InMemoryDataStore()
+    repo_store = InMemoryKeyValueStore()
     repo = RoutingPerformanceRepository(repo_store)
     strategy = StaticAggregationStrategy()
     ingestor = DataIngestor(repo, strategy)

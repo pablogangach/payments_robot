@@ -6,7 +6,7 @@ from payments_service.app.routing.decisioning.decision_strategies import (
 from payments_service.app.routing.preprocessing.service import RoutingService, FeeService
 from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository
-from payments_service.app.core.repositories.datastore import InMemoryDataStore
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 
 @pytest.fixture
 def mock_fees():
@@ -14,7 +14,7 @@ def mock_fees():
 
 @pytest.fixture
 def mock_repo():
-    store = InMemoryDataStore()
+    store = InMemoryKeyValueStore()
     return RoutingPerformanceRepository(store)
 
 def test_fixed_provider_strategy():

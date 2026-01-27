@@ -17,16 +17,19 @@ from payments_service.app.processors.adapters.internal_mock_adapter import Inter
 
 from payments_service.app.processors.registry import ProcessorRegistry
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.core.repositories.datastore import InMemoryDataStore
-
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore, InMemoryRelationalStore
 # Singletons for in-memory persistence
-# We use a single store for simplicity in this version, but repositories could have separate ones.
-store = InMemoryDataStore()
+# We now use specialized stores for different access patterns.
+# Even for relational data, we use separate stores to simulate different tables/collections.
+merchant_store = InMemoryRelationalStore()
+customer_store = InMemoryRelationalStore()
+payment_store = InMemoryRelationalStore()
+intelligence_store = InMemoryKeyValueStore()
 
-merchant_repo = MerchantRepository(store)
-customer_repo = CustomerRepository(store)
-payment_repo = PaymentRepository(store)
-performance_repo = RoutingPerformanceRepository(store)
+merchant_repo = MerchantRepository(merchant_store)
+customer_repo = CustomerRepository(customer_store)
+payment_repo = PaymentRepository(payment_store)
+performance_repo = RoutingPerformanceRepository(intelligence_store)
 
 # Processors Registration
 processor_registry = ProcessorRegistry()
@@ -37,7 +40,15 @@ processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
 # Services
 fee_service = FeeService()
-routing_strategy = LLMDecisionStrategy(objective="balanced")
+
+from payments_service.app.routing.decisioning.decision_strategies import AISUITE_AVAILABLE
+
+if AISUITE_AVAILABLE:
+    routing_strategy = LLMDecisionStrategy(objective="balanced")
+else:
+    # Fallback to deterministic strategy if AI suite is not available
+    routing_strategy = DeterministicLeastCostStrategy()
+
 routing_service = RoutingService(
     fee_service=fee_service, 
     performance_repository=performance_repo,

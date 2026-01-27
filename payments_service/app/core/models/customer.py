@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
 import uuid
@@ -6,7 +6,7 @@ import uuid
 class CustomerBase(BaseModel):
     merchant_id: str
     name: str
-    email: EmailStr
+    email: str
     payment_method_token: str # Represents a vaulted token (e.g. pm_123 or tok_123)
 
 class CustomerCreate(CustomerBase):

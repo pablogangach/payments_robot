@@ -3,14 +3,14 @@ from payments_service.app.routing.preprocessing.service import PreprocessingServ
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, ProviderPerformance, PerformanceMetrics, CostStructure, RoutingDimension
 from payments_service.app.routing.preprocessing.models import BillingType, Customer, PaymentMethodDetails, Product
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.core.repositories.datastore import InMemoryDataStore
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 
 def test_preprocess_recurrent_payment():
     """
     Scenario: A recurrent payment is scheduled.
     The service should select the best route based on performance data.
     """
-    store = InMemoryDataStore()
+    store = InMemoryKeyValueStore()
     repo = RoutingPerformanceRepository(store)
     service = PreprocessingService(repo)
     

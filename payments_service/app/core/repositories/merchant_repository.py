@@ -1,9 +1,9 @@
 from typing import Optional, List
 from payments_service.app.core.models.merchant import Merchant
-from .datastore import DataStore
+from .datastore import RelationalStore
 
 class MerchantRepository:
-    def __init__(self, store: DataStore[Merchant]):
+    def __init__(self, store: RelationalStore[Merchant]):
         self._store = store
 
     def save(self, merchant: Merchant) -> Merchant:
@@ -15,8 +15,8 @@ class MerchantRepository:
         return self._store.save(merchant.id, merchant)
 
     def find_by_id(self, merchant_id: str) -> Optional[Merchant]:
-        return self._store.get(merchant_id)
+        return self._store.find_by_id(merchant_id)
 
     def find_by_tax_id(self, tax_id: str) -> Optional[Merchant]:
-        results = self._store.find_by(lambda m: m.tax_id == tax_id)
+        results = self._store.query(lambda m: m.tax_id == tax_id)
         return results[0] if results else None

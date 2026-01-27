@@ -1,13 +1,13 @@
 from typing import List, Optional
 from .models import ProviderPerformance, RoutingDimension
-from ...core.repositories.datastore import DataStore
+from ...core.repositories.datastore import KeyValueStore
 
 class RoutingPerformanceRepository:
     """
-    In-memory repository for storing and querying provider performance data.
-    Designed for fast dimension-based lookups.
+    Repository for storing and querying provider performance data.
+    Designed for fast dimension-based lookups using a Key-Value approach.
     """
-    def __init__(self, store: DataStore[List[ProviderPerformance]]):
+    def __init__(self, store: KeyValueStore[List[ProviderPerformance]]):
         self._store = store
 
     def _get_key(self, dimension: RoutingDimension) -> str:
@@ -32,7 +32,7 @@ class RoutingPerformanceRepository:
         if not updated:
             existing_records.append(performance)
         
-        self._store.save(key, existing_records)
+        self._store.set(key, existing_records)
 
     def find_by_dimension(self, dimension: RoutingDimension) -> List[ProviderPerformance]:
         """

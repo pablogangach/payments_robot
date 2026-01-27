@@ -3,11 +3,12 @@ import os
 from payments_service.app.core.models.payment import PaymentProvider
 from payments_service.app.routing.ingestion import DataIngestor, StripeCsvParser, AdyenCsvParser
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy, RoutingDimension
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 from payments_service.tests.routing.providers import LocalFileDataProvider
 
 def test_multi_provider_csv_ingestion():
     # 1. Setup
-    repo = RoutingPerformanceRepository()
+    repo = RoutingPerformanceRepository(InMemoryKeyValueStore())
     strategy = StaticAggregationStrategy()
     ingestor = DataIngestor(repo, strategy)
     

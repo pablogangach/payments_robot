@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
 import uuid
@@ -14,7 +14,7 @@ class BankingInfo(BaseModel):
 
 class MerchantBase(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     mcc: str
     country: str
     currency: str

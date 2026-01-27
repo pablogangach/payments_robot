@@ -4,6 +4,7 @@ from typing import List, Any
 from payments_service.app.core.models.payment import PaymentProvider
 from payments_service.app.routing.ingestion import RawTransactionRecord, DataProvider, DataIngestor
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
+from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore
 
 class MockJsonDataProvider(DataProvider):
     """
@@ -17,7 +18,7 @@ class MockJsonDataProvider(DataProvider):
 
 def test_ingestion_pipeline_success():
     # 1. Setup
-    repo = RoutingPerformanceRepository()
+    repo = RoutingPerformanceRepository(InMemoryKeyValueStore())
     strategy = StaticAggregationStrategy()
     ingestor = DataIngestor(repo, strategy)
     
@@ -90,7 +91,7 @@ def test_ingestion_pipeline_success():
     assert adyen_perf.metrics.avg_latency_ms == 300
     
 def test_ingestion_with_mobile_wallet():
-    repo = RoutingPerformanceRepository()
+    repo = RoutingPerformanceRepository(InMemoryKeyValueStore())
     strategy = StaticAggregationStrategy()
     ingestor = DataIngestor(repo, strategy)
     

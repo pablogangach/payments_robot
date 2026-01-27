@@ -1,6 +1,10 @@
 import json
 from typing import List, Any, Optional
-import aisuite
+try:
+    import aisuite
+    AISUITE_AVAILABLE = True
+except ImportError:
+    AISUITE_AVAILABLE = False
 from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 from .interfaces import RoutingDecisionStrategy
 from .models import ProviderPerformance
@@ -46,6 +50,8 @@ class LLMDecisionStrategy(RoutingDecisionStrategy):
     performance, and a specific objective.
     """
     def __init__(self, objective: str = "balanced", model: str = "openai:gpt-4o"):
+        if not AISUITE_AVAILABLE:
+            raise ImportError("aisuite is not installed. Please install it to use LLMDecisionStrategy.")
         self.objective = objective
         self.model = model
         self.client = aisuite.Client()
