@@ -8,6 +8,7 @@ except ImportError:
 from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 from .interfaces import RoutingDecisionStrategy
 from .models import ProviderPerformance
+from .planner import RoutingPlanner
 
 class FixedProviderStrategy(RoutingDecisionStrategy):
     """
@@ -90,4 +91,62 @@ class LLMDecisionStrategy(RoutingDecisionStrategy):
 
         response_data = json.loads(completion.choices[0].message.content or "{}")
         provider_name = response_data.get("best_provider", PaymentProvider.INTERNAL.value)
+        return PaymentProvider(provider_name)
+
+class PlannerRoutingStrategy(RoutingDecisionStrategy):
+    """
+    A sophisticated strategy that uses a Planner to generate and execute 
+    a multi-agent routing plan.
+    """
+    def __init__(self, objective: str = "balanced", model: str = "openai:gpt-4o"):
+        self.objective = objective
+        self.model = model
+        self.planner = RoutingPlanner(model=model)
+        self.client = aisuite.Client()
+
+    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
+        # 1. Prepare context
+        context = {
+            "payment": payment_in.model_dump(),
+            "performance": [p.model_dump() for p in performance_data],
+            "fees": [f.model_dump() for f in fees]
+        }
+
+        # 2. Generate Plan
+        plan = self.planner.generate_plan(self.objective, context)
+        print(f"Generated Plan: {json.dumps(plan, indent=2)}")
+
+        # 3. Execute Plan
+        results = self.planner.execute_plan(plan, context)
+
+        # 4. Final Synthesis
+        prompt = """
+        You are the Final Decision Agent. 
+        Objective: {objective}
+        Transaction: {payment_json}
+        
+        --- AGENT EVIDENCE ---
+        {results_json}
+        
+        --- INSTRUCTION ---
+        Based on the evidence from our specialists, select the best provider.
+        Return ONLY a JSON object: {{"best_provider": "...", "reasoning": "..."}}
+        """.format(
+            objective=self.objective,
+            payment_json=json.dumps(context['payment'], default=str),
+            results_json=json.dumps(results, default=str)
+        )
+
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+
+        response_data = json.loads(completion.choices[0].message.content or "{}")
+        provider_name = response_data.get("best_provider", PaymentProvider.INTERNAL.value)
+        
+        print(f"Final Decision via Planner: {provider_name}")
+        print(f"Reasoning: {response_data.get('reasoning')}")
+        
         return PaymentProvider(provider_name)

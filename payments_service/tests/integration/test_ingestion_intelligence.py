@@ -18,7 +18,7 @@ class MockDataProvider:
     def fetch_data(self) -> List[RawTransactionRecord]:
         return self.records
 
-def test_ingestion_intelligence_path():
+def test_ingestion_intelligence_path(docker_services):
     """
     Flow 1: Ingestion & Intelligence Path
     Validates end-to-end data pipeline: 

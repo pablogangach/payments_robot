@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional, Dict, List
 from payments_service.app.core.models.payment import PaymentProvider
@@ -12,6 +12,8 @@ class RoutingDimension(BaseModel):
     """
     Represents the specific slice of traffic context for looking up performance data.
     """
+    model_config = ConfigDict(frozen=True)
+
     payment_method_type: str  # e.g., "credit_card"
     payment_form: str = "card_on_file" # e.g., "card_on_file", "apple_pay", "google_pay"
     network: str = "unknown" # e.g., "visa", "mastercard"
@@ -19,9 +21,6 @@ class RoutingDimension(BaseModel):
     region: str = "domestic" # e.g., "domestic", "international"
     currency: str = "USD"
     is_network_tokenized: bool = False
-
-    class Config:
-        frozen = True # Make it hashable so it can be used as a key if needed
 
 class CostStructure(BaseModel):
     variable_fee_percent: float

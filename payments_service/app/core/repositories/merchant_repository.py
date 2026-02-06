@@ -18,5 +18,5 @@ class MerchantRepository:
         return self._store.find_by_id(merchant_id)
 
     def find_by_tax_id(self, tax_id: str) -> Optional[Merchant]:
-        results = self._store.query(lambda m: m.tax_id == tax_id)
+        results = self._store.query(tax_id=tax_id)
         return results[0] if results else None

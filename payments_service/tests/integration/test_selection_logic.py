@@ -24,7 +24,7 @@ class MockFeeService(FeeService):
     def get_all_fees(self) -> List[FeeStructure]:
         return self.fees
 
-def test_selection_logic_cheapest_provider():
+def test_selection_logic_cheapest_provider(docker_services):
     """
     Flow 2: Intelligence-Driven Selection
     Validates that the RoutingService selects the provider with the lowest cost.

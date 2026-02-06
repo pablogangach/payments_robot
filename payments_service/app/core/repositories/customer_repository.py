@@ -13,4 +13,4 @@ class CustomerRepository:
         return self._store.find_by_id(customer_id)
 
     def find_by_merchant_id(self, merchant_id: str) -> List[Customer]:
-        return self._store.query(lambda c: c.merchant_id == merchant_id)
+        return self._store.query(merchant_id=merchant_id)

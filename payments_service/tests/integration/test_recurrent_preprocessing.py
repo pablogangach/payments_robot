@@ -22,7 +22,7 @@ class MockDataProvider:
     def fetch_data(self) -> List[RawTransactionRecord]:
         return self.records
 
-def test_recurrent_preprocessing_flow():
+def test_recurrent_preprocessing_flow(docker_services):
     """
     Flow 3: Recurrent Payment Preprocessing
     Validates that a subscription setup correctly pre-determines a route based on historical metrics.

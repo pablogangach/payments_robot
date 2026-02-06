@@ -1,3 +1,8 @@
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import redis
+
 from payments_service.app.core.repositories.merchant_repository import MerchantRepository
 from payments_service.app.core.repositories.customer_repository import CustomerRepository
 from payments_service.app.core.repositories.payment_repository import PaymentRepository
@@ -7,7 +12,7 @@ from payments_service.app.core.services.payment_service import PaymentService
 
 from payments_service.app.routing.preprocessing import RoutingService, FeeService
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
-from payments_service.app.routing.decisioning.decision_strategies import LLMDecisionStrategy, DeterministicLeastCostStrategy
+from payments_service.app.routing.decisioning.decision_strategies import PlannerRoutingStrategy, DeterministicLeastCostStrategy
 from payments_service.app.routing.ingestion import DataIngestor
 
 from payments_service.app.processors.adapters.stripe_adapter import StripeProcessor
@@ -17,34 +22,67 @@ from payments_service.app.processors.adapters.internal_mock_adapter import Inter
 
 from payments_service.app.processors.registry import ProcessorRegistry
 from payments_service.app.core.models.payment import PaymentProvider
-from payments_service.app.core.repositories.datastore import InMemoryKeyValueStore, InMemoryRelationalStore
-# Singletons for in-memory persistence
-# We now use specialized stores for different access patterns.
-# Even for relational data, we use separate stores to simulate different tables/collections.
-merchant_store = InMemoryRelationalStore()
-customer_store = InMemoryRelationalStore()
-payment_store = InMemoryRelationalStore()
-intelligence_store = InMemoryKeyValueStore()
+from payments_service.app.core.repositories.datastore import (
+    InMemoryKeyValueStore, 
+    InMemoryRelationalStore,
+    RedisKeyValueStore,
+    PostgresRelationalStore
+)
+from payments_service.app.core.models.merchant import Merchant
+from payments_service.app.core.repositories.models import Base, MerchantModel
+from payments_service.app.routing.decisioning.models import ProviderPerformance
+
+# Environment Config
+DATABASE_URL = os.getenv("DATABASE_URL")
+REDIS_URL = os.getenv("REDIS_URL")
+
+# --- Storage Layer Setup ---
+
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL)
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db_session = SessionLocal()
+    
+    # Bridge between SQLAlchemy and Pydantic
+    merchant_store = PostgresRelationalStore(db_session, MerchantModel, Merchant)
+    customer_store = InMemoryRelationalStore() # Customer persistent store later
+    payment_store = InMemoryRelationalStore()
+else:
+    merchant_store = InMemoryRelationalStore()
+    customer_store = InMemoryRelationalStore()
+    payment_store = InMemoryRelationalStore()
+
+if REDIS_URL:
+    redis_client = redis.from_url(REDIS_URL)
+    # The store expects a model_class for validation. 
+    # For List[ProviderPerformance], we'll need a wrapper or just use JSON.
+    # RoutingPerformanceRepository uses KeyValueStore[List[ProviderPerformance]]
+    intelligence_store = RedisKeyValueStore(redis_client, list) 
+else:
+    intelligence_store = InMemoryKeyValueStore()
+
+# --- Repositories ---
 
 merchant_repo = MerchantRepository(merchant_store)
 customer_repo = CustomerRepository(customer_store)
 payment_repo = PaymentRepository(payment_store)
 performance_repo = RoutingPerformanceRepository(intelligence_store)
 
-# Processors Registration
+# --- Processors Registration ---
 processor_registry = ProcessorRegistry()
 processor_registry.register(PaymentProvider.STRIPE, StripeProcessor())
 processor_registry.register(PaymentProvider.ADYEN, AdyenProcessor())
 processor_registry.register(PaymentProvider.BRAINTREE, BraintreeProcessor())
 processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
-# Services
+# --- Services ---
 fee_service = FeeService()
 
 from payments_service.app.routing.decisioning.decision_strategies import AISUITE_AVAILABLE
 
 if AISUITE_AVAILABLE:
-    routing_strategy = LLMDecisionStrategy(objective="balanced")
+    routing_strategy = PlannerRoutingStrategy(objective="balanced")
 else:
     # Fallback to deterministic strategy if AI suite is not available
     routing_strategy = DeterministicLeastCostStrategy()
