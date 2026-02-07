@@ -1,5 +1,6 @@
 import json
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Dict
+from collections import defaultdict
 try:
     import aisuite
     AISUITE_AVAILABLE = True
@@ -7,7 +8,7 @@ except ImportError:
     AISUITE_AVAILABLE = False
 from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 from .interfaces import RoutingDecisionStrategy
-from .models import ProviderPerformance
+from .models import ProviderPerformance, ResolvedProvider
 from .planner import RoutingPlanner
 
 class FixedProviderStrategy(RoutingDecisionStrategy):
@@ -18,7 +19,7 @@ class FixedProviderStrategy(RoutingDecisionStrategy):
     def __init__(self, provider: PaymentProvider):
         self.provider = provider
 
-    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
+    def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
         return self.provider
 
 class DeterministicLeastCostStrategy(RoutingDecisionStrategy):
@@ -26,24 +27,18 @@ class DeterministicLeastCostStrategy(RoutingDecisionStrategy):
     A rule-based strategy that calculates the cost for each provider
     based on the fee structure and selects the absolute cheapest.
     """
-    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
-        if not fees:
-            return PaymentProvider.STRIPE # Fallback
+    def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
+        if not providers:
+            return PaymentProvider.STRIPE
             
         amount = payment_in.amount
-        
-        # Simple cost calculation logic
-        def calculate_cost(fee):
-            return fee.fixed_fee + (amount * (fee.variable_fee_percent / 100))
-
-        # Filter fees that match the context (simplified for now)
-        # In a real app, fee would be chosen based on region/network
-        ranked_providers = sorted(fees, key=lambda f: calculate_cost(f))
-        
-        if ranked_providers:
-            return ranked_providers[0].provider
+        costs = {}
+        for p in providers:
+            cost = p.fixed_fee + (amount * (p.variable_fee_percent / 100))
+            costs[p.provider] = cost
             
-        return PaymentProvider.STRIPE
+        best_provider = min(costs, key=costs.get)
+        return PaymentProvider(best_provider)
 
 class LLMDecisionStrategy(RoutingDecisionStrategy):
     """
@@ -57,26 +52,22 @@ class LLMDecisionStrategy(RoutingDecisionStrategy):
         self.model = model
         self.client = aisuite.Client()
 
-    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
-        fees_json = json.dumps([f.model_dump() for f in fees], default=str)
-        perf_json = json.dumps([p.model_dump() for p in performance_data], default=str)
+    def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
+        provider_json = json.dumps([p.model_dump() for p in providers], default=str)
         payment_json = payment_in.model_dump_json()
 
         prompt = f"""
         You are an intelligent payment routing engine.
         Objective: {self.objective}
 
-        --- AVAILABLE DATA ---
-        FEES: {fees_json}
-        PERFORMANCE: {perf_json}
+        --- RESOLVED PROVIDER DATA ---
+        PROVIDERS: {provider_json}
         TRANSACTION: {payment_json}
 
         --- INSTRUCTION ---
         Select the best provider according to the objective. 
-        Least Cost: Minimize total fees.
-        Highest Auth: Maximize auth_rate.
-        Balanced: Optimize for both.
-
+        Each provider record contains the final reconciled cost and performance metrics.
+        
         Return ONLY a JSON object: {{"best_provider": "...", "reasoning": "..."}}
         """
 
@@ -90,7 +81,7 @@ class LLMDecisionStrategy(RoutingDecisionStrategy):
         )
 
         response_data = json.loads(completion.choices[0].message.content or "{}")
-        provider_name = response_data.get("best_provider", PaymentProvider.INTERNAL.value)
+        provider_name = response_data.get("best_provider", PaymentProvider.STRIPE.value)
         return PaymentProvider(provider_name)
 
 class PlannerRoutingStrategy(RoutingDecisionStrategy):
@@ -99,17 +90,18 @@ class PlannerRoutingStrategy(RoutingDecisionStrategy):
     a multi-agent routing plan.
     """
     def __init__(self, objective: str = "balanced", model: str = "openai:gpt-4o"):
+        if not AISUITE_AVAILABLE:
+            raise ImportError("aisuite is not installed. Please install it to use PlannerRoutingStrategy.")
         self.objective = objective
         self.model = model
         self.planner = RoutingPlanner(model=model)
         self.client = aisuite.Client()
 
-    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
+    def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
         # 1. Prepare context
         context = {
             "payment": payment_in.model_dump(),
-            "performance": [p.model_dump() for p in performance_data],
-            "fees": [f.model_dump() for f in fees]
+            "providers": [p.model_dump() for p in providers]
         }
 
         # 2. Generate Plan
@@ -144,7 +136,7 @@ class PlannerRoutingStrategy(RoutingDecisionStrategy):
         )
 
         response_data = json.loads(completion.choices[0].message.content or "{}")
-        provider_name = response_data.get("best_provider", PaymentProvider.INTERNAL.value)
+        provider_name = response_data.get("best_provider", PaymentProvider.STRIPE.value)
         
         print(f"Final Decision via Planner: {provider_name}")
         print(f"Reasoning: {response_data.get('reasoning')}")

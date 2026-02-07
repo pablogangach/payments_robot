@@ -19,22 +19,20 @@ class CostAnalystAgent(BaseAgent):
     Agent specialized in analyzing fee structures and recommending the cheapest provider.
     """
     def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        fees = context.get("fees", [])
-        performance = context.get("performance", [])
+        providers = context.get("providers", [])
         payment = context.get("payment", {})
         
         prompt = """
         You are a Cost Analyst Agent for a payment system.
-        Analyze the following fees, provider performance (which contains specific cost structures), and payment details to recommend the cheapest provider.
+        Analyze the following resolved provider data and payment details to recommend the cheapest provider.
+        Each provider record contains a reconciled cost structure (fixed_fee and variable_fee_percent).
         
-        FEES (Static): {fees_json}
-        PERFORMANCE (Dynamic Metrics with Costs): {perf_json}
+        PROVIDERS (Resolved): {providers_json}
         PAYMENT: {payment_json}
         
         Return a JSON object: {{"analysis": "...", "recommended_provider": "...", "confidence": 0.0-1.0}}
         """.format(
-            fees_json=json.dumps(fees, default=str),
-            perf_json=json.dumps(performance, default=str),
+            providers_json=json.dumps(providers, default=str),
             payment_json=json.dumps(payment, default=str)
         )
         
@@ -51,17 +49,17 @@ class PerformanceAnalystAgent(BaseAgent):
     Agent specialized in analyzing authorization rates and latency.
     """
     def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        performance = context.get("performance", [])
+        providers = context.get("providers", [])
         
         prompt = """
         You are a Performance Analyst Agent for a payment system.
-        Analyze the following provider performance data and recommend the most reliable provider.
+        Analyze the following resolved provider data and recommend the most reliable provider.
         
-        PERFORMANCE: {perf_json}
+        PROVIDERS (Resolved): {providers_json}
         
         Return a JSON object: {{"analysis": "...", "recommended_provider": "...", "confidence": 0.0-1.0}}
         """.format(
-            perf_json=json.dumps(performance, default=str)
+            providers_json=json.dumps(providers, default=str)
         )
         
         completion = self.client.chat.completions.create(

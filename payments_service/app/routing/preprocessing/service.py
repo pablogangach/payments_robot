@@ -14,7 +14,7 @@ from .models import (
     Product, 
     BillingType
 )
-from ..decisioning.models import RoutingDimension
+from ..decisioning.models import RoutingDimension, ResolvedProvider
 from ..decisioning.repository import RoutingPerformanceRepository
 
 class FeeService:
@@ -72,15 +72,46 @@ class RoutingService:
         if payment_create.provider:
             return payment_create.provider
 
-        # 1. Gather context
+        # 1. Gather raw data
         all_fees = self.fee_service.get_all_fees()
-        all_performance = self.performance_repository.get_all()
+        # In a real app, we'd filter by dimension here
+        dimension = RoutingDimension(
+            payment_method_type="credit_card",
+            currency=payment_create.currency,
+            region="domestic" # Default for now
+        )
+        performance_data = self.performance_repository.find_by_dimension(dimension)
         
-        # 2. Delegate to strategy
+        # 2. Reconcile into ResolvedProvider view (Deterministic Source of Truth)
+        resolved_map = {}
+        
+        # Priority 1: Performance Data (Dynamic)
+        for perf in performance_data:
+            resolved_map[perf.provider] = ResolvedProvider(
+                provider=perf.provider,
+                fixed_fee=perf.metrics.cost_structure.fixed_fee,
+                variable_fee_percent=perf.metrics.cost_structure.variable_fee_percent,
+                auth_rate=perf.metrics.auth_rate,
+                avg_latency_ms=perf.metrics.avg_latency_ms
+            )
+            
+        # Priority 2: Static Fees (Fallback if not in Performance Data)
+        for fee in all_fees:
+            if fee.provider not in resolved_map:
+                resolved_map[fee.provider] = ResolvedProvider(
+                    provider=fee.provider,
+                    fixed_fee=fee.fixed_fee,
+                    variable_fee_percent=fee.variable_fee_percent,
+                    auth_rate=0.95, # Default auth rate for static fees
+                    avg_latency_ms=300 # Default latency for static fees
+                )
+        
+        resolved_providers = list(resolved_map.values())
+
+        # 3. Delegate to strategy
         provider = self.strategy.decide(
             payment_in=payment_create,
-            performance_data=all_performance,
-            fees=all_fees
+            providers=resolved_providers
         )
         
         print(f"Routing Decision: Strategy {self.strategy.__class__.__name__} chose '{provider.value}'")

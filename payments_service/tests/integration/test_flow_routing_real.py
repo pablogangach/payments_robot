@@ -18,14 +18,20 @@ def test_routing_flow_real_storage(docker_services):
     """
     Validates that the routing engine correctly uses real Postgres and Redis data.
     """
+    import uuid
+    import random
+    unique_tax_id = f"TX-{random.randint(1000000, 9999999)}"
+    unique_merchant_id = str(uuid.uuid4())
+    
     # 1. Seed a Merchant in Postgres
     merchant = Merchant(
+        id=unique_merchant_id,
         name="Test Merchant",
-        email="test@example.com",
+        email=f"test-{unique_merchant_id}@example.com",
         mcc="5411",
         country="US",
         currency="USD",
-        tax_id="12-3456789",
+        tax_id=unique_tax_id,
         status=MerchantStatus.ACTIVE
     )
     merchant_repo.save(merchant)

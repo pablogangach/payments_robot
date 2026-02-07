@@ -38,3 +38,14 @@ class ProviderPerformance(BaseModel):
     dimension: RoutingDimension
     metrics: PerformanceMetrics
     data_window: str = "30d"
+
+class ResolvedProvider(BaseModel):
+    """
+    The final, reconciled view of a provider for a specific transaction.
+    Combines static fees and dynamic performance metrics.
+    """
+    provider: PaymentProvider
+    fixed_fee: float
+    variable_fee_percent: float
+    auth_rate: float
+    avg_latency_ms: int

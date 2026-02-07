@@ -14,6 +14,9 @@ class StaticAggregationStrategy(IntelligenceStrategy):
     A simple strategy that aggregates transaction records by dimension and provider
     to calculate basic performance metrics (averages).
     """
+    def __init__(self, default_fixed_fee: float = 0.30, default_variable_fee_percent: float = 2.9):
+        self.default_fixed_fee = default_fixed_fee
+        self.default_variable_fee_percent = default_variable_fee_percent
 
     def analyze(self, records: List[RawTransactionRecord]) -> List[ProviderPerformance]:
         # 1. Group by (Provider, RoutingDimension)
@@ -48,8 +51,8 @@ class StaticAggregationStrategy(IntelligenceStrategy):
                 fraud_rate=0.01, # Placeholder
                 avg_latency_ms=avg_latency,
                 cost_structure=CostStructure(
-                    variable_fee_percent=2.9, # Placeholder
-                    fixed_fee=0.30           # Placeholder
+                    variable_fee_percent=self.default_variable_fee_percent,
+                    fixed_fee=self.default_fixed_fee
                 )
             )
             

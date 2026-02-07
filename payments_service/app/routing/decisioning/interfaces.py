@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 from ..ingestion.models import RawTransactionRecord
-from .models import ProviderPerformance, RoutingDimension
+from .models import ProviderPerformance, RoutingDimension, ResolvedProvider
 from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 
 class IntelligenceStrategy(ABC):
@@ -20,7 +20,7 @@ class RoutingDecisionStrategy(ABC):
     Interface for making the final routing decision.
     """
     @abstractmethod
-    def decide(self, payment_in: PaymentCreate, performance_data: List[ProviderPerformance], fees: List[Any]) -> PaymentProvider:
+    def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
         """
         Determines the best provider based on available context and performance.
         """

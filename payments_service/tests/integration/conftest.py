@@ -28,6 +28,35 @@ def wait_for_service(check_command, timeout=30):
         time.sleep(1)
     return False
 
+@pytest.fixture(scope="session", autouse=True)
+def system_wipe(docker_services, docker_compose_file):
+    """
+    Ensures a clean state by flushing Redis and truncating Postgres once per session.
+    """
+    # docker_services is a session fixture, so this will run once after it's up
+    cmd = ["docker", "compose"] if "docker compose" in str(docker_compose_file) else ["docker-compose"]
+    # Check if we need to adjust cmd based on what docker_services used
+    # For simplicity, we just use the same logic
+    
+    # Using 'docker compose' as it's the modern standard, fallback to 'docker-compose' if needed
+    base_cmd = ["docker", "compose"]
+    try:
+        subprocess.run(base_cmd + ["version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        base_cmd = ["docker-compose"]
+    
+    full_cmd = base_cmd + ["-f", docker_compose_file]
+
+    print("\n[Cleanup] Flushing Redis...")
+    subprocess.run(full_cmd + ["exec", "-T", "cache", "redis-cli", "FLUSHALL"], check=True)
+
+    print("[Cleanup] Truncating Postgres tables...")
+    # Truncate all tables in the public schema
+    truncate_sql = "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;"
+    subprocess.run(full_cmd + ["exec", "-T", "db", "psql", "-U", "postgres", "-d", "payments", "-c", truncate_sql], check=True)
+
+    print("[Cleanup] System wipe complete.")
+
 @pytest.fixture(scope="session")
 def docker_services(docker_compose_file):
     """

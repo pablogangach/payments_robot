@@ -79,13 +79,36 @@ processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 # --- Services ---
 fee_service = FeeService()
 
-from payments_service.app.routing.decisioning.decision_strategies import AISUITE_AVAILABLE
+# --- Strategy Selection ---
+STRATEGY_TYPE = os.getenv("ROUTING_STRATEGY", "LEAST_COST").upper()
+ROUTING_MODEL = os.getenv("ROUTING_MODEL", "openai:gpt-4o")
+ROUTING_OBJECTIVE = os.getenv("ROUTING_OBJECTIVE", "balanced")
 
-if AISUITE_AVAILABLE:
-    routing_strategy = PlannerRoutingStrategy(objective="balanced")
-else:
-    # Fallback to deterministic strategy if AI suite is not available
-    routing_strategy = DeterministicLeastCostStrategy()
+from payments_service.app.routing.decisioning.interfaces import RoutingDecisionStrategy
+from payments_service.app.routing.decisioning.decision_strategies import AISUITE_AVAILABLE, FixedProviderStrategy
+
+def _initialize_strategy() -> RoutingDecisionStrategy:
+    if STRATEGY_TYPE == "PLANNER":
+        if not AISUITE_AVAILABLE:
+            print("Warning: ROUTING_STRATEGY=PLANNER requested but aisuite not available. Falling back to LEAST_COST.")
+            return DeterministicLeastCostStrategy()
+        return PlannerRoutingStrategy(objective=ROUTING_OBJECTIVE, model=ROUTING_MODEL)
+    
+    if STRATEGY_TYPE == "LLM":
+        if not AISUITE_AVAILABLE:
+            print("Warning: ROUTING_STRATEGY=LLM requested but aisuite not available. Falling back to LEAST_COST.")
+            return DeterministicLeastCostStrategy()
+        from payments_service.app.routing.decisioning.decision_strategies import LLMDecisionStrategy
+        return LLMDecisionStrategy(objective=ROUTING_OBJECTIVE, model=ROUTING_MODEL)
+    
+    if STRATEGY_TYPE == "FIXED":
+        # Default fixed to INTERNAL for now, could be further parameterized
+        return FixedProviderStrategy(provider=PaymentProvider.INTERNAL)
+        
+    return DeterministicLeastCostStrategy()
+
+routing_strategy = _initialize_strategy()
+print(f"Initialized Routing Strategy: {routing_strategy.__class__.__name__} (Config: {STRATEGY_TYPE})")
 
 routing_service = RoutingService(
     fee_service=fee_service, 
