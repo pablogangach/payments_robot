@@ -21,6 +21,9 @@ RUN poetry config virtualenvs.create false \
 # Copy application code
 COPY . .
 
+# Make start script executable
+RUN chmod +x payments_service/start.sh
+
 # Expose port
 EXPOSE 8000
 
@@ -28,4 +31,4 @@ EXPOSE 8000
 ENV PYTHONPATH=/app
 
 # Command to run the application
-CMD ["uvicorn", "payments_service.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./payments_service/start.sh"]

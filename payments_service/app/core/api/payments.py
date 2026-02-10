@@ -6,7 +6,7 @@ from payments_service.app.core.api.dependencies import get_payment_service
 
 router = APIRouter()
 
-@router.post("/charges", response_model=Payment, status_code=status.HTTP_201_CREATED)
+@router.post("/charge", response_model=Payment, status_code=status.HTTP_201_CREATED)
 def create_charge(
     charge_in: PaymentCreate,
     service: PaymentService = Depends(get_payment_service)
@@ -18,6 +18,13 @@ def create_charge(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.get("/recent", response_model=List[Payment])
+def list_recent_charges(
+    service: PaymentService = Depends(get_payment_service)
+):
+    # Retrieve all for the dashboard, could be limited/sorted
+    return service.payment_repo.find_all()
+
 @router.get("/charges/{charge_id}", response_model=Payment)
 def get_charge(
     charge_id: str,
@@ -27,10 +34,3 @@ def get_charge(
         return service.get_payment(charge_id)
     except KeyError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Charge not found")
-
-@router.get("/charges", response_model=List[Payment])
-def list_charges(
-    service: PaymentService = Depends(get_payment_service)
-):
-    # This would typically be filtered by merchant_id in a real app
-    return service.payment_repo.find_all()

@@ -29,8 +29,10 @@ from payments_service.app.core.repositories.datastore import (
     PostgresRelationalStore
 )
 from payments_service.app.core.models.merchant import Merchant
-from payments_service.app.core.repositories.models import Base, MerchantModel
-from payments_service.app.routing.decisioning.models import ProviderPerformance
+from payments_service.app.core.repositories.models import Base, MerchantORM, CustomerORM, PaymentORM
+from payments_service.app.core.models.merchant import Merchant
+from payments_service.app.core.models.customer import Customer
+from payments_service.app.core.models.payment import Payment
 
 # Environment Config
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -45,9 +47,9 @@ if DATABASE_URL:
     db_session = SessionLocal()
     
     # Bridge between SQLAlchemy and Pydantic
-    merchant_store = PostgresRelationalStore(db_session, MerchantModel, Merchant)
-    customer_store = InMemoryRelationalStore() # Customer persistent store later
-    payment_store = InMemoryRelationalStore()
+    merchant_store = PostgresRelationalStore(db_session, MerchantORM, Merchant)
+    customer_store = PostgresRelationalStore(db_session, CustomerORM, Customer)
+    payment_store = PostgresRelationalStore(db_session, PaymentORM, Payment)
 else:
     merchant_store = InMemoryRelationalStore()
     customer_store = InMemoryRelationalStore()
