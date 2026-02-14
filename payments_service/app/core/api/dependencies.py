@@ -9,6 +9,8 @@ from payments_service.app.core.repositories.payment_repository import PaymentRep
 from payments_service.app.core.services.merchant_service import MerchantService
 from payments_service.app.core.services.customer_service import CustomerService
 from payments_service.app.core.services.payment_service import PaymentService
+from payments_service.app.core.repositories.subscription_repository import SubscriptionRepository
+from payments_service.app.core.repositories.precalculated_route_repository import PrecalculatedRouteRepository
 
 from payments_service.app.routing.preprocessing import RoutingService, FeeService
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
@@ -29,7 +31,7 @@ from payments_service.app.core.repositories.datastore import (
     PostgresRelationalStore
 )
 from payments_service.app.core.models.merchant import Merchant
-from payments_service.app.core.repositories.models import Base, MerchantORM, CustomerORM, PaymentORM
+from payments_service.app.core.repositories.models import Base, MerchantORM, CustomerORM, PaymentORM, SubscriptionORM, PrecalculatedRouteORM
 from payments_service.app.core.models.merchant import Merchant
 from payments_service.app.core.models.customer import Customer
 from payments_service.app.core.models.payment import Payment
@@ -70,6 +72,8 @@ merchant_repo = MerchantRepository(merchant_store)
 customer_repo = CustomerRepository(customer_store)
 payment_repo = PaymentRepository(payment_store)
 performance_repo = RoutingPerformanceRepository(intelligence_store)
+subscription_repo = SubscriptionRepository(db_session) if DATABASE_URL else None
+precalc_repo = PrecalculatedRouteRepository(db_session) if DATABASE_URL else None
 
 # --- Processors Registration ---
 processor_registry = ProcessorRegistry()
@@ -129,7 +133,8 @@ payment_service = PaymentService(
     merchant_repo=merchant_repo,
     customer_repo=customer_repo,
     routing_service=routing_service,
-    processor_registry=processor_registry
+    processor_registry=processor_registry,
+    precalculated_route_repository=precalc_repo
 )
 
 def get_payment_service():

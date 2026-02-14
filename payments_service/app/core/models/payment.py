@@ -32,6 +32,7 @@ class Payment(BaseModel):
     provider: Optional[PaymentProvider] = None
     provider_payment_id: Optional[str] = None
     routing_decision: Optional[str] = None
+    subscription_id: Optional[str] = None
 
 class PaymentCreate(BaseModel):
     merchant_id: str
@@ -40,3 +41,4 @@ class PaymentCreate(BaseModel):
     currency: str
     description: str = "Default Payment Description"
     provider: Optional[PaymentProvider] = None
+    subscription_id: Optional[str] = None

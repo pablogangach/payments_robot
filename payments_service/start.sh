@@ -4,8 +4,8 @@ set -e
 echo "Waiting for database..."
 # Simple wait loop could be added here if needed, but depends_on healthcheck handles it usually
 
-echo "Running migrations..."
-poetry run alembic upgrade head || echo "Migrations failed or already handled"
+echo "Initializing database..."
+# Table creation and seeding is handled by seed_local.py
 
 echo "Seeding local data..."
 python payments_service/scripts/seed_local.py

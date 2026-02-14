@@ -81,6 +81,10 @@ def docker_services(docker_compose_file):
         if not wait_for_service(cmd + ["-f", docker_compose_file, "exec", "-T", "cache", "redis-cli", "ping"]):
             pytest.fail("Redis service timed out")
 
+        print("[Docker] Waiting for Application (app) to be ready...")
+        if not wait_for_service(["curl", "-s", "http://localhost:8000/health"]):
+            pytest.fail("Application service timed out")
+
         print("[Docker] All services are up and healthy!")
         
         # Set environment variables for the tests

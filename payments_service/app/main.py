@@ -24,3 +24,7 @@ app.include_router(customers.router, tags=["customers"])
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}

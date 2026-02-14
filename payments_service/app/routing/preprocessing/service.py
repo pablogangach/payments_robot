@@ -14,8 +14,13 @@ from .models import (
     Product, 
     BillingType
 )
+from ...core.models.subscription import Subscription
+from ...core.models.precalculated_route import PrecalculatedRouteCreate
+from ...core.repositories.subscription_repository import SubscriptionRepository
+from ...core.repositories.precalculated_route_repository import PrecalculatedRouteRepository
 from ..decisioning.models import RoutingDimension, ResolvedProvider
 from ..decisioning.repository import RoutingPerformanceRepository
+from ...core.utils.datetime_utils import now_utc, normalize_to_utc
 
 class FeeService:
     def __init__(self):
@@ -121,8 +126,17 @@ class PreprocessingService:
     """
     Service to handle pre-processing of payments, such as preparing routes for recurring payments.
     """
-    def __init__(self, performance_repository: RoutingPerformanceRepository):
+    def __init__(
+        self, 
+        performance_repository: RoutingPerformanceRepository,
+        subscription_repository: Optional[SubscriptionRepository] = None,
+        precalculated_route_repository: Optional[PrecalculatedRouteRepository] = None,
+        routing_service: Optional[RoutingService] = None
+    ):
         self.performance_repository = performance_repository
+        self.subscription_repository = subscription_repository
+        self.precalculated_route_repository = precalculated_route_repository
+        self.routing_service = routing_service
 
     def preprocess_recurrent_payment(
         self, 
@@ -166,3 +180,42 @@ class PreprocessingService:
             processor=best_candidate.provider,
             routing_reason=f"Selected based on lowest fixed fee: {best_candidate.metrics.cost_structure.fixed_fee}"
         )
+
+    def precalculate_upcoming_renewals(self, lookahead_days: int = 7):
+        """
+        Scans for subscriptions renewing within the lookahead window and 
+        pre-calculates the best routing decision.
+        """
+        if not self.subscription_repository or not self.precalculated_route_repository or not self.routing_service:
+            print("Warning: Repositories or RoutingService not injected. Skipping pre-calculation.")
+            return
+
+        from datetime import timedelta
+        now = now_utc()
+        target_date = now + timedelta(days=lookahead_days)
+        
+        upcoming_subscriptions = self.subscription_repository.find_upcoming_renewals(now, target_date)
+        print(f"Found {len(upcoming_subscriptions)} upcoming renewals.")
+
+        for sub in upcoming_subscriptions:
+            # Create a PaymentCreate object for the routing service
+            payment_in = PaymentCreate(
+                merchant_id=sub.merchant_id,
+                customer_id=sub.customer_id,
+                amount=sub.amount,
+                currency=sub.currency,
+                description=f"Pre-calculation for renewal of sub {sub.id}"
+            )
+            
+            # Determine the best provider
+            best_provider = self.routing_service.find_best_route(payment_in)
+            
+            # Persist the decision
+            route_in = PrecalculatedRouteCreate(
+                subscription_id=sub.id,
+                provider=best_provider,
+                routing_decision=f"Pre-calculated via {self.routing_service.strategy.__class__.__name__} at {now.isoformat()}",
+                expires_at=sub.next_renewal_at + timedelta(hours=24) # Valid until slightly after renewal
+            )
+            self.precalculated_route_repository.save(route_in)
+            print(f"Pre-calculated route for subscription {sub.id}: {best_provider.value}")

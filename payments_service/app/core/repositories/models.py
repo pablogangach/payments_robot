@@ -45,5 +45,28 @@ class PaymentORM(Base):
     status = Column(String, default="pending")
     provider_payment_id = Column(String, nullable=True)
     routing_decision = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    subscription_id = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class SubscriptionORM(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    customer_id = Column(String, nullable=False)
+    merchant_id = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False)
+    next_renewal_at = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String, default="active")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class PrecalculatedRouteORM(Base):
+    __tablename__ = "precalculated_routes"
+
+    subscription_id = Column(String, primary_key=True)
+    provider = Column(String, nullable=False)
+    routing_decision = Column(String, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

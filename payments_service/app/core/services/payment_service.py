@@ -1,14 +1,15 @@
-from typing import Dict, List, Optional
-from datetime import datetime, timezone
-from payments_service.app.processors.interfaces import PaymentProcessor
-from payments_service.app.core.models.payment import Payment, PaymentCreate, PaymentStatus
+from typing import Optional, List
+import uuid
+from datetime import datetime, timezone # Keep this for now, as it's not explicitly removed and might be used elsewhere, though now_utc is preferred.
+from payments_service.app.core.models.payment import Payment, PaymentCreate, PaymentStatus, PaymentProvider
 from payments_service.app.core.models.merchant import Merchant, MerchantCreate
 from payments_service.app.core.repositories.payment_repository import PaymentRepository
 from payments_service.app.core.repositories.merchant_repository import MerchantRepository
 from payments_service.app.core.repositories.customer_repository import CustomerRepository
+from payments_service.app.core.repositories.precalculated_route_repository import PrecalculatedRouteRepository
 from payments_service.app.routing.preprocessing import RoutingService
-
 from payments_service.app.processors.registry import ProcessorRegistry
+from payments_service.app.core.utils.datetime_utils import now_utc, normalize_to_utc
 
 class PaymentService:
     def __init__(
@@ -18,6 +19,7 @@ class PaymentService:
         customer_repo: CustomerRepository,
         routing_service: RoutingService,
         processor_registry: ProcessorRegistry,
+        precalculated_route_repository: Optional[PrecalculatedRouteRepository] = None,
         feedback_collector: Optional['FeedbackCollector'] = None
     ):
         self.payment_repo = payment_repo
@@ -25,6 +27,7 @@ class PaymentService:
         self.customer_repo = customer_repo
         self.routing_service = routing_service
         self.processor_registry = processor_registry
+        self.precalculated_route_repository = precalculated_route_repository
         self.feedback_collector = feedback_collector
 
     def create_charge(self, charge_in: PaymentCreate) -> Payment:
@@ -38,13 +41,25 @@ class PaymentService:
             raise KeyError(f"Customer {charge_in.customer_id} not found")
 
         # 2. Routing Decision
-        try:
-            provider_type = self.routing_service.find_best_route(charge_in)
-            reason = "AI Routing Decision"
-        except Exception:
-            from payments_service.app.core.models.payment import PaymentProvider
-            provider_type = PaymentProvider.STRIPE
-            reason = "Fallback: Routing Engine Unavailable"
+        provider_type = None
+        reason = None
+
+        # Check for pre-calculated route if it's a subscription renewal
+        if charge_in.subscription_id and self.precalculated_route_repository:
+            precalc = self.precalculated_route_repository.find_by_subscription_id(charge_in.subscription_id)
+            if precalc and precalc.expires_at > now_utc():
+                provider_type = precalc.provider
+                reason = f"Pre-calculated: {precalc.routing_decision}"
+                print(f"Using pre-calculated route for subscription {charge_in.subscription_id}: {provider_type.value}")
+
+        if not provider_type:
+            try:
+                provider_type = self.routing_service.find_best_route(charge_in)
+                reason = "AI Routing Decision (Live)"
+            except Exception:
+                from payments_service.app.core.models.payment import PaymentProvider
+                provider_type = PaymentProvider.STRIPE
+                reason = "Fallback: Routing Engine Unavailable"
 
         # 3. Get Processor Adapter
         processor = self.processor_registry.get_processor(provider_type)
@@ -71,7 +86,7 @@ class PaymentService:
             routing_decision=reason,
             status=PaymentStatus.COMPLETED if processor_resp.status == "success" else PaymentStatus.FAILED,
             provider_payment_id=processor_resp.processor_transaction_id,
-            updated_at=datetime.now(timezone.utc)
+            updated_at=now_utc()
         )
 
         saved_payment = self.payment_repo.save(payment)

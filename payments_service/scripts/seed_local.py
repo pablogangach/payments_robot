@@ -28,43 +28,38 @@ def seed():
     
     # Ensure tables exist
     from payments_service.app.core.repositories.models import Base
-    print("Creating tables if they don't exist...")
+    print("Wiping and recreating tables...")
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Check if we have merchants
     from payments_service.app.core.repositories.models import MerchantORM, CustomerORM
+
+    print("Seeding default merchant...")
+    merchant = MerchantORM(
+        id="default_merchant",
+        name="Global E-Commerce Corp",
+        email="admin@globalcorp.com",
+        mcc="5411",
+        country="US",
+        currency="USD",
+        tax_id="12-3456789",
+        status="active"
+    )
+    session.add(merchant)
     
-    # We use ORM directly for seeding to be safe
-    existing_merchants = session.query(MerchantORM).all()
-    if not existing_merchants:
-        print("Seeding default merchant...")
-        merchant = MerchantORM(
-            id="default_merchant",
-            name="Global E-Commerce Corp",
-            email="admin@globalcorp.com",
-            mcc="5411",
-            country="US",
-            currency="USD",
-            tax_id="12-3456789",
-            status="active"
-        )
-        session.add(merchant)
-        
-        print("Seeding default customer...")
-        customer = CustomerORM(
-            id="cust_123",
-            merchant_id="default_merchant",
-            email="john.doe@example.com",
-            payment_method_token="tok_visa_123",
-            status="active"
-        )
-        session.add(customer)
-        session.commit()
-    else:
-        print(f"Database already seeded with {len(existing_merchants)} merchants.")
+    print("Seeding default customer...")
+    customer = CustomerORM(
+        id="cust_123",
+        merchant_id="default_merchant",
+        email="john.doe@example.com",
+        payment_method_token="tok_visa_123",
+        status="active"
+    )
+    session.add(customer)
+    session.commit()
 
     # 2. Redis Seeding
     redis_client = redis.from_url(REDIS_URL)
