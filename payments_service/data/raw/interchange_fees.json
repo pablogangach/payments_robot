@@ -1,0 +1,42 @@
+[
+    {
+        "network": "visa",
+        "card_type": "credit",
+        "card_category": "classic",
+        "region": "domestic",
+        "fee_percent": 1.51,
+        "fee_fixed": 0.10
+    },
+    {
+        "network": "visa",
+        "card_type": "debit",
+        "card_category": "classic",
+        "region": "domestic",
+        "fee_percent": 0.05,
+        "fee_fixed": 0.21
+    },
+    {
+        "network": "mastercard",
+        "card_type": "credit",
+        "card_category": "consumer",
+        "region": "domestic",
+        "fee_percent": 1.58,
+        "fee_fixed": 0.10
+    },
+    {
+        "network": "mastercard",
+        "card_type": "debit",
+        "card_category": "consumer",
+        "region": "domestic",
+        "fee_percent": 0.05,
+        "fee_fixed": 0.21
+    },
+    {
+        "network": "amex",
+        "card_type": "credit",
+        "card_category": "standard",
+        "region": "domestic",
+        "fee_percent": 2.3,
+        "fee_fixed": 0.0
+    }
+]

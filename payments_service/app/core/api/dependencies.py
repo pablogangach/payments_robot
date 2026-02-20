@@ -11,6 +11,7 @@ from payments_service.app.core.services.customer_service import CustomerService
 from payments_service.app.core.services.payment_service import PaymentService
 from payments_service.app.core.repositories.subscription_repository import SubscriptionRepository
 from payments_service.app.core.repositories.precalculated_route_repository import PrecalculatedRouteRepository
+from payments_service.app.core.repositories.metadata_repository import CardBINRepository, InterchangeFeeRepository
 
 from payments_service.app.routing.preprocessing import RoutingService, FeeService
 from payments_service.app.routing.decisioning import RoutingPerformanceRepository, StaticAggregationStrategy
@@ -30,8 +31,12 @@ from payments_service.app.core.repositories.datastore import (
     RedisKeyValueStore,
     PostgresRelationalStore
 )
+from payments_service.app.core.models.metadata import CardBIN, InterchangeFee
 from payments_service.app.core.models.merchant import Merchant
-from payments_service.app.core.repositories.models import Base, MerchantORM, CustomerORM, PaymentORM, SubscriptionORM, PrecalculatedRouteORM
+from payments_service.app.core.repositories.models import (
+    Base, MerchantORM, CustomerORM, PaymentORM, SubscriptionORM, 
+    PrecalculatedRouteORM, CardBINORM, InterchangeFeeORM
+)
 from payments_service.app.core.models.merchant import Merchant
 from payments_service.app.core.models.customer import Customer
 from payments_service.app.core.models.payment import Payment
@@ -52,10 +57,14 @@ if DATABASE_URL:
     merchant_store = PostgresRelationalStore(db_session, MerchantORM, Merchant)
     customer_store = PostgresRelationalStore(db_session, CustomerORM, Customer)
     payment_store = PostgresRelationalStore(db_session, PaymentORM, Payment)
+    card_bin_store = PostgresRelationalStore(db_session, CardBINORM, CardBIN)
+    interchange_fee_store = PostgresRelationalStore(db_session, InterchangeFeeORM, InterchangeFee)
 else:
     merchant_store = InMemoryRelationalStore()
     customer_store = InMemoryRelationalStore()
     payment_store = InMemoryRelationalStore()
+    card_bin_store = InMemoryRelationalStore()
+    interchange_fee_store = InMemoryRelationalStore()
 
 if REDIS_URL:
     redis_client = redis.from_url(REDIS_URL)
@@ -74,6 +83,8 @@ payment_repo = PaymentRepository(payment_store)
 performance_repo = RoutingPerformanceRepository(intelligence_store)
 subscription_repo = SubscriptionRepository(db_session) if DATABASE_URL else None
 precalc_repo = PrecalculatedRouteRepository(db_session) if DATABASE_URL else None
+card_bin_repo = CardBINRepository(card_bin_store)
+interchange_fee_repo = InterchangeFeeRepository(interchange_fee_store)
 
 # --- Processors Registration ---
 processor_registry = ProcessorRegistry()

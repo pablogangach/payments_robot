@@ -70,3 +70,26 @@ class PrecalculatedRouteORM(Base):
     routing_decision = Column(String, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class CardBINORM(Base):
+    __tablename__ = "card_bins"
+
+    bin = Column(String, primary_key=True)
+    brand = Column(String, nullable=True)
+    type = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    issuer = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    alpha_2 = Column(String, nullable=True)
+    alpha_3 = Column(String, nullable=True)
+
+class InterchangeFeeORM(Base):
+    __tablename__ = "interchange_fees"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    network = Column(String, nullable=False)
+    card_type = Column(String, nullable=False)
+    card_category = Column(String, nullable=True)
+    region = Column(String, nullable=False)
+    fee_percent = Column(Float, nullable=False)
+    fee_fixed = Column(Float, nullable=False)

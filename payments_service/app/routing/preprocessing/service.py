@@ -1,10 +1,11 @@
 import json
+import redis
 from typing import List, Optional
 try:
     import aisuite
 except ImportError:
     pass
-from payments_service.app.core.models.payment import PaymentCreate, PaymentProvider, PaymentProvider
+from payments_service.app.core.models.payment import PaymentCreate, PaymentProvider
 from .models import (
     FeeStructure, 
     PaymentContext, 
@@ -18,6 +19,7 @@ from ...core.models.subscription import Subscription
 from ...core.models.precalculated_route import PrecalculatedRouteCreate
 from ...core.repositories.subscription_repository import SubscriptionRepository
 from ...core.repositories.precalculated_route_repository import PrecalculatedRouteRepository
+from ...core.repositories.metadata_repository import CardBINRepository, InterchangeFeeRepository
 from ..decisioning.models import RoutingDimension, ResolvedProvider
 from ..decisioning.repository import RoutingPerformanceRepository
 from ...core.utils.datetime_utils import now_utc, normalize_to_utc
@@ -129,11 +131,17 @@ class PreprocessingService:
     def __init__(
         self, 
         performance_repository: RoutingPerformanceRepository,
+        bin_repository: CardBINRepository,
+        fee_repository: InterchangeFeeRepository,
+        redis_client: Optional[redis.Redis] = None,
         subscription_repository: Optional[SubscriptionRepository] = None,
         precalculated_route_repository: Optional[PrecalculatedRouteRepository] = None,
         routing_service: Optional[RoutingService] = None
     ):
         self.performance_repository = performance_repository
+        self.bin_repository = bin_repository
+        self.fee_repository = fee_repository
+        self.redis_client = redis_client
         self.subscription_repository = subscription_repository
         self.precalculated_route_repository = precalculated_route_repository
         self.routing_service = routing_service
@@ -154,31 +162,66 @@ class PreprocessingService:
         return self._determine_route(context)
 
     def _determine_route(self, context: PaymentContext) -> PaymentRoute:
-        # 1. Build Dimension from Context
+        # 1. Lookup BIN Metadata
+        bin_data = None
+        if context.payment_method.bin:
+            bin_data = self.bin_repository.find_by_bin(context.payment_method.bin)
+
+        # 2. Build Dimension from Context and BIN data
+        network = bin_data.brand.lower() if bin_data and bin_data.brand else "visa"
+        card_type = bin_data.type.lower() if bin_data and bin_data.type else "credit"
+        region = "domestic" if bin_data and bin_data.country == "United States" else "international" # Logic shortcut
+
         dimension = RoutingDimension(
             payment_method_type=context.payment_method.type,
             payment_form="card_on_file",
-            network="visa",
-            card_type="credit",
-            region="domestic",
+            network=network,
+            card_type=card_type,
+            region=region,
             currency="USD"
         )
 
-        # 2. Get Candidates via Repository
+        # 3. Check Provider Health (Redis)
+        healthy_providers = []
+        all_providers = [PaymentProvider.STRIPE, PaymentProvider.ADYEN, PaymentProvider.BRAINTREE]
+        
+        if self.redis_client:
+            for provider in all_providers:
+                health = self.redis_client.get(f"provider_health:{provider.value.lower()}")
+                if health != b"down":
+                    healthy_providers.append(provider)
+        else:
+            healthy_providers = all_providers
+
+        # 4. Get Candidates via Performance Repository
         candidates = self.performance_repository.find_by_dimension(dimension)
         
+        # Filter by health
+        candidates = [c for c in candidates if c.provider in healthy_providers]
+        
         if not candidates:
+            fallback = healthy_providers[0] if healthy_providers else PaymentProvider.STRIPE
             return PaymentRoute(
-                processor=PaymentProvider.STRIPE,
-                routing_reason="Default Fallback"
+                processor=fallback,
+                routing_reason="Default Fallback (No performance data or all preferred down)"
             )
 
-        # 3. Select Best
-        best_candidate = min(candidates, key=lambda c: c.metrics.cost_structure.fixed_fee)
+        # 5. Select Best based on Estimated Cost (Interchange + Markup)
+        # Simplified: interchange fees usually favor debit/domestic.
+        # For this prototype, we'll use a scoring function.
+        
+        def score(candidate):
+            # Base cost from performance records (markup)
+            markup = candidate.metrics.cost_structure.fixed_fee
+            # Potential auth rate penalty
+            reliability_bonus = (1.0 - candidate.metrics.auth_rate) * 10
+            return markup + reliability_bonus
+
+        best_candidate = min(candidates, key=score)
 
         return PaymentRoute(
             processor=best_candidate.provider,
-            routing_reason=f"Selected based on lowest fixed fee: {best_candidate.metrics.cost_structure.fixed_fee}"
+            routing_reason=f"Optimal route for {network} {card_type} ({region}). Scoring: {score(best_candidate):.4f}"
         )
 
     def precalculate_upcoming_renewals(self, lookahead_days: int = 7):

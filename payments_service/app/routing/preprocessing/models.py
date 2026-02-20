@@ -14,7 +14,7 @@ class Customer(BaseModel):
 
 class PaymentMethodDetails(BaseModel):
     type: str # e.g. "credit_card", "bank_transfer"
-    # Placeholder for more details like issuing country, bin, etc.
+    bin: Optional[str] = None # First 6-8 digits of the PAN
     last4: Optional[str] = None 
 
 class Product(BaseModel):
