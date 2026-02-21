@@ -98,22 +98,29 @@ class PlannerRoutingStrategy(RoutingDecisionStrategy):
         self.client = aisuite.Client()
 
     def decide(self, payment_in: PaymentCreate, providers: List[ResolvedProvider]) -> PaymentProvider:
-        # 1. Prepare context
+        # 1. Prepare enriched context
+        bin_metadata = getattr(payment_in, "bin_metadata", None)
+        interchange_fees = getattr(payment_in, "interchange_fees", []) or []
+        provider_health = getattr(payment_in, "provider_health", {}) or {}
+
         context = {
             "payment": payment_in.model_dump(),
-            "providers": [p.model_dump() for p in providers]
+            "providers": [p.model_dump() for p in providers],
+            "bin_metadata": bin_metadata.model_dump() if hasattr(bin_metadata, "model_dump") else bin_metadata,
+            "interchange_fees": [f.model_dump() if hasattr(f, "model_dump") else f for f in interchange_fees],
+            "provider_health": provider_health
         }
 
         # 2. Generate Plan
         plan = self.planner.generate_plan(self.objective, context)
         print(f"Generated Plan: {json.dumps(plan, indent=2)}")
 
-        # 3. Execute Plan
+        # 3. Execute Core Plan (Specialists)
         results = self.planner.execute_plan(plan, context)
 
-        # 4. Final Synthesis
-        prompt = """
-        You are the Final Decision Agent. 
+        # 4. Preliminary Decision Synthesis
+        synthesis_prompt = """
+        You are the Routing Supervisor. 
         Objective: {objective}
         Transaction: {payment_json}
         
@@ -121,7 +128,7 @@ class PlannerRoutingStrategy(RoutingDecisionStrategy):
         {results_json}
         
         --- INSTRUCTION ---
-        Based on the evidence from our specialists, select the best provider.
+        Based on the technical evidence, propose the best provider.
         Return ONLY a JSON object: {{"best_provider": "...", "reasoning": "..."}}
         """.format(
             objective=self.objective,
@@ -131,14 +138,24 @@ class PlannerRoutingStrategy(RoutingDecisionStrategy):
 
         completion = self.client.chat.completions.create(
             model=self.model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": synthesis_prompt}],
             response_format={"type": "json_object"}
         )
 
-        response_data = json.loads(completion.choices[0].message.content or "{}")
-        provider_name = response_data.get("best_provider", PaymentProvider.STRIPE.value)
+        proposal = json.loads(completion.choices[0].message.content or "{}")
         
-        print(f"Final Decision via Planner: {provider_name}")
-        print(f"Reasoning: {response_data.get('reasoning')}")
+        # 5. SELF-CORRECTION: Critic Review
+        context["proposed_decision"] = proposal
+        context["agent_evidence"] = results
         
-        return PaymentProvider(provider_name)
+        critic_results = self.planner.execute_plan([{"agent": "Critic", "reason": "Self-Correction Safety Review"}], context)
+        critic_feedback = critic_results.get("Critic", {})
+        
+        final_provider_name = proposal.get("best_provider")
+        if not critic_feedback.get("is_valid", True) and critic_feedback.get("recommended_override"):
+            print(f"CRITIC OVERRIDE: {final_provider_name} -> {critic_feedback.get('recommended_override')}")
+            print(f"Reason: {critic_feedback.get('feedback')}")
+            final_provider_name = critic_feedback.get("recommended_override")
+
+        print(f"Final Decision via Planner: {final_provider_name}")
+        return PaymentProvider(final_provider_name)

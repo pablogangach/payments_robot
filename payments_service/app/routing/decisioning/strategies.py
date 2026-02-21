@@ -14,22 +14,34 @@ class StaticAggregationStrategy(IntelligenceStrategy):
     A simple strategy that aggregates transaction records by dimension and provider
     to calculate basic performance metrics (averages).
     """
-    def __init__(self, default_fixed_fee: float = 0.30, default_variable_fee_percent: float = 2.9):
+    def __init__(self, 
+                 default_fixed_fee: float = 0.30, 
+                 default_variable_fee_percent: float = 2.9,
+                 dynamic_dimensions: List[str] = None):
         self.default_fixed_fee = default_fixed_fee
         self.default_variable_fee_percent = default_variable_fee_percent
+        self.dynamic_dimensions = dynamic_dimensions or []
 
     def analyze(self, records: List[RawTransactionRecord]) -> List[ProviderPerformance]:
         # 1. Group by (Provider, RoutingDimension)
         grouped_data = defaultdict(list)
         
         for record in records:
+            # Build base dimension metadata from record's extra_fields if requested
+            extra_dim_data = {
+                field: record.extra_fields.get(field) 
+                for field in self.dynamic_dimensions 
+                if field in record.extra_fields
+            }
+
             dim = RoutingDimension(
                 payment_method_type="credit_card", # Simplification
                 payment_form=record.payment_form,
                 network=record.network,
                 card_type=record.card_type,
                 region=record.region,
-                currency=record.currency
+                currency=record.currency,
+                **extra_dim_data # Inject dynamic dimensions for grouping
             )
             grouped_data[(record.provider, dim)].append(record)
 

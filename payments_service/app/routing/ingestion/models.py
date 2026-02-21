@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from payments_service.app.core.models.payment import PaymentProvider
 
 class RawTransactionRecord(BaseModel):
@@ -21,3 +21,4 @@ class RawTransactionRecord(BaseModel):
     network: str  # e.g., "visa", "mastercard"
     region: str  # e.g., "domestic", "international"
     timestamp: datetime
+    extra_fields: Dict[str, Any] = Field(default_factory=dict)

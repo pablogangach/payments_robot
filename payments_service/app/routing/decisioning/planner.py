@@ -1,7 +1,14 @@
 import json
 from typing import List, Dict, Any, Type
 import aisuite
-from .specialists import BaseAgent, CostAnalystAgent, PerformanceAnalystAgent
+from .specialists import (
+    BaseAgent, 
+    CostAnalystAgent, 
+    PerformanceAnalystAgent,
+    NetworkIntelligenceAgent,
+    HealthSentinelAgent,
+    CriticAgent
+)
 
 class Capability:
     def __init__(self, name: str, description: str, agent_class: Type[BaseAgent]):
@@ -26,6 +33,21 @@ class RoutingPlanner:
             name="PerformanceAnalyst",
             description="Analyzes auth rates and latency to find the most reliable provider.",
             agent_class=PerformanceAnalystAgent
+        ))
+        self.register_capability(Capability(
+            name="NetworkIntelligence",
+            description="Analyzes BIN metadata and interchange fees for network-specific optimizations.",
+            agent_class=NetworkIntelligenceAgent
+        ))
+        self.register_capability(Capability(
+            name="HealthSentinel",
+            description="Assesses real-time provider health status from Redis.",
+            agent_class=HealthSentinelAgent
+        ))
+        self.register_capability(Capability(
+            name="Critic",
+            description="Reviews proposed decisions against hard safety rules and health status.",
+            agent_class=CriticAgent
         ))
 
     def register_capability(self, capability: Capability):

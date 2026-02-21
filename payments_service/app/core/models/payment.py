@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime, timezone
 from enum import Enum
 import uuid
@@ -42,3 +42,9 @@ class PaymentCreate(BaseModel):
     description: str = "Default Payment Description"
     provider: Optional[PaymentProvider] = None
     subscription_id: Optional[str] = None
+    
+    # Internal fields for agentic routing context
+    bin_metadata: Optional[Any] = None
+    interchange_fees: Optional[list] = None
+    provider_health: Optional[dict] = None
+    payment_method: Optional[Any] = None # Added for BIN lookup in RoutingService

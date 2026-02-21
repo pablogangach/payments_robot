@@ -20,21 +20,29 @@ class StripeCsvParser(BaseTransactionParser):
     Parses Stripe's balance transaction report CSV.
     """
     def parse(self, row: Dict[str, Any]) -> RawTransactionRecord:
-        # Stripe specific mapping
-        # id,amount,currency,fee,net,type,created,card_brand,card_country,status
+        # Core fields mapping
+        core_mapping = {
+            "amount": float(row["amount"]),
+            "currency": row["currency"].upper(),
+            "status": "succeeded" if row["status"] == "available" else "failed",
+            "latency_ms": 0,
+            "bin": "000000",
+            "card_type": "credit",
+            "network": row["card_brand"].lower(),
+            "region": "domestic" if row["card_country"] == "US" else "international",
+            "timestamp": datetime.strptime(row["created"], "%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Captured unmapped fields as extra_fields
+        mapped_keys = {"amount", "currency", "status", "card_brand", "card_country", "created"}
+        extra = {k: v for k, v in row.items() if k not in mapped_keys}
+
         return RawTransactionRecord(
             provider=PaymentProvider.STRIPE,
-            payment_form="card_on_file", # Default for this report type
-            processing_type="signature", # Default/Assumed
-            amount=float(row["amount"]),
-            currency=row["currency"].upper(),
-            status="succeeded" if row["status"] == "available" else "failed",
-            latency_ms=0, # Not available in this report
-            bin="000000", # Not available in this report
-            card_type="credit", # Assumed default
-            network=row["card_brand"].lower(),
-            region="domestic" if row["card_country"] == "US" else "international",
-            timestamp=datetime.strptime(row["created"], "%Y-%m-%d %H:%M:%S")
+            payment_form="card_on_file",
+            processing_type="signature",
+            extra_fields=extra,
+            **core_mapping
         )
 
 class AdyenCsvParser(BaseTransactionParser):
@@ -42,19 +50,27 @@ class AdyenCsvParser(BaseTransactionParser):
     Parses Adyen's Payment Accounting Report CSV.
     """
     def parse(self, row: Dict[str, Any]) -> RawTransactionRecord:
-        # Adyen specific mapping
-        # Merchant Reference,PSP Reference,Payment Method,Creation Date,Type,Currency,Gross Debit,Commission,Status
+        # Core fields mapping
+        core_mapping = {
+            "amount": float(row["Gross Debit"]),
+            "currency": row["Currency"].upper(),
+            "status": "succeeded" if row["Type"] == "Settled" else "failed",
+            "latency_ms": 0,
+            "bin": "000000",
+            "card_type": "credit",
+            "network": row["Payment Method"].lower(),
+            "region": "domestic",
+            "timestamp": datetime.strptime(row["Creation Date"], "%Y-%m-%d %H:%M:%S")
+        }
+
+        # Captured unmapped fields as extra_fields
+        mapped_keys = {"Gross Debit", "Currency", "Type", "Payment Method", "Creation Date", "Status", "Merchant Reference", "PSP Reference"}
+        extra = {k: v for k, v in row.items() if k not in mapped_keys}
+
         return RawTransactionRecord(
             provider=PaymentProvider.ADYEN,
             payment_form="card_on_file",
             processing_type="signature",
-            amount=float(row["Gross Debit"]),
-            currency=row["Currency"].upper(),
-            status="succeeded" if row["Type"] == "Settled" else "failed",
-            latency_ms=0,
-            bin="000000",
-            card_type="credit",
-            network=row["Payment Method"].lower(),
-            region="domestic", # Placeholder logic
-            timestamp=datetime.strptime(row["Creation Date"], "%Y-%m-%d %H:%M:%S")
+            extra_fields=extra,
+            **core_mapping
         )

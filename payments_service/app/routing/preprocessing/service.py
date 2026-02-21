@@ -65,10 +65,16 @@ class RoutingService:
         self, 
         fee_service: FeeService, 
         performance_repository: RoutingPerformanceRepository,
+        bin_repository: Optional[CardBINRepository] = None,
+        fee_repository: Optional[InterchangeFeeRepository] = None,
+        redis_client: Optional[redis.Redis] = None,
         strategy: Optional[RoutingDecisionStrategy] = None
     ):
         self.fee_service = fee_service
         self.performance_repository = performance_repository
+        self.bin_repository = bin_repository
+        self.fee_repository = fee_repository
+        self.redis_client = redis_client
         # Default to Least Cost strategy if none provided (more robust than LLM for base setup)
         self.strategy = strategy or DeterministicLeastCostStrategy()
 
@@ -81,6 +87,25 @@ class RoutingService:
 
         # 1. Gather raw data
         all_fees = self.fee_service.get_all_fees()
+        
+        # --- Context Enrichment for Agentic Strategies ---
+        # Attach BIN metadata if possible
+        if self.bin_repository and hasattr(payment_create, "payment_method") and payment_create.payment_method.bin:
+            payment_create.bin_metadata = self.bin_repository.find_by_bin(payment_create.payment_method.bin)
+        
+        # Attach Interchange rules
+        if self.fee_repository:
+            payment_create.interchange_fees = self.fee_repository.list_all()
+            
+        # Attach Health status
+        if self.redis_client:
+            health = {}
+            for p in [PaymentProvider.STRIPE, PaymentProvider.ADYEN, PaymentProvider.BRAINTREE]:
+                status = self.redis_client.get(f"provider_health:{p.value.lower()}")
+                health[p.value] = status.decode('utf-8') if status else "up"
+            payment_create.provider_health = health
+        # --------------------------------------------------
+
         # In a real app, we'd filter by dimension here
         dimension = RoutingDimension(
             payment_method_type="credit_card",
@@ -94,12 +119,16 @@ class RoutingService:
         
         # Priority 1: Performance Data (Dynamic)
         for perf in performance_data:
+            # Reconstruct extra fields from RoutingDimension
+            extra_from_dim = perf.dimension.model_extra or {}
+
             resolved_map[perf.provider] = ResolvedProvider(
                 provider=perf.provider,
                 fixed_fee=perf.metrics.cost_structure.fixed_fee,
                 variable_fee_percent=perf.metrics.cost_structure.variable_fee_percent,
                 auth_rate=perf.metrics.auth_rate,
-                avg_latency_ms=perf.metrics.avg_latency_ms
+                avg_latency_ms=perf.metrics.avg_latency_ms,
+                extra_fields=extra_from_dim
             )
             
         # Priority 2: Static Fees (Fallback if not in Performance Data)

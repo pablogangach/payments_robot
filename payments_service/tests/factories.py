@@ -1,12 +1,13 @@
 from typing import Any, Type, TypeVar
 from pydantic import BaseModel
-from payments_service.app.core.models.payment import PaymentProvider
+from payments_service.app.core.models.payment import PaymentProvider, PaymentCreate
 from payments_service.app.core.models.metadata import CardBIN, InterchangeFee
 from payments_service.app.routing.decisioning.models import (
     RoutingDimension, 
     CostStructure, 
     PerformanceMetrics, 
-    ProviderPerformance
+    ProviderPerformance,
+    ResolvedProvider
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -44,6 +45,14 @@ def create_mock(model_class: Type[T], **overrides) -> T:
             "dimension": create_mock(RoutingDimension),
             "metrics": create_mock(PerformanceMetrics)
         }
+    elif model_class == ResolvedProvider:
+        defaults = {
+            "provider": PaymentProvider.STRIPE,
+            "fixed_fee": 0.1,
+            "variable_fee_percent": 2.9,
+            "auth_rate": 0.95,
+            "avg_latency_ms": 200
+        }
     elif model_class == CardBIN:
         defaults = {
             "bin": "411111",
@@ -58,6 +67,14 @@ def create_mock(model_class: Type[T], **overrides) -> T:
             "region": "domestic",
             "fee_percent": 1.5,
             "fee_fixed": 0.1
+        }
+    elif model_class == PaymentCreate:
+        defaults = {
+            "merchant_id": "m1",
+            "customer_id": "c1",
+            "amount": 10.0,
+            "currency": "USD",
+            "description": "Mock Payment"
         }
         
     defaults.update(overrides)
