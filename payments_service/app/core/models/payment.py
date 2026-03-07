@@ -10,6 +10,7 @@ class PaymentStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    REFUNDED = "refunded"
 
 class PaymentProvider(str, Enum):
     STRIPE = "stripe"

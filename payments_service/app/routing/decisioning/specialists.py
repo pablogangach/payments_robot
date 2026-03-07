@@ -80,19 +80,35 @@ class NetworkIntelligenceAgent(BaseAgent):
         payment = context.get("payment", {})
         
         prompt = """
-        You are a Network Intelligence Agent. 
-        Analyze the card metadata and interchange rules to identify cost optimization opportunities.
-        
+        You are a Network Intelligence (NI) Specialist for a global payment routing engine.
+        Your goal is to identify cost-saving opportunities by analyzing card network metadata and interchange fee structures.
+
+        --- INPUT DATA ---
         BIN METADATA: {bin_json}
         INTERCHANGE RULES: {fees_json}
-        PAYMENT: {payment_json}
-        
-        Consider:
-        1. Is this a debit card? (Usually lower interchange).
-        2. Is this domestic or international?
-        3. Which network (Visa/MC/Amex) has the best rate for this category?
-        
-        Return a JSON object: {{"analysis": "...", "preferred_networks": [...], "routing_advice": "..."}}
+        PAYMENT CONTEXT: {payment_json}
+
+        --- ANALYSIS FRAMEWORK ---
+        1. **Classification**: Identify card type (Debit/Credit), network (Visa/MC/Amex), and category (Classic/Gold/Business).
+        2. **Interchange Impact**: Cross-reference the card data with the provided interchange rules. 
+           - Regulated Debit often has significantly lower caps (e.g., 0.05% + $0.21).
+           - International transactions typically incur higher cross-border interchange fees.
+        3. **Provider Steering**: Based on the rules, specify which card brand/network combinations are most advantageous for this specific transaction.
+
+        --- OUTPUT REQUIREMENTS ---
+        Return a JSON object with:
+        - "analysis": A detailed technical breakdown of the interchange cost implications.
+        - "interchange_score": (0.0-1.0) High score means this card is cheap to process via network-optimized routes.
+        - "preferred_networks": A list of optimized networks for this BIN.
+        - "routing_advice": Explicit guidance for the Routing Planner.
+
+        Example:
+        {{
+            "analysis": "Visa Regulated Debit identified. Domestic interchange is capped at 0.05% + $0.21. Significant savings vs Credit.",
+            "interchange_score": 0.95,
+            "preferred_networks": ["visa"],
+            "routing_advice": "Prioritize providers with low fixed-fee markups to leverage the interchange cap."
+        }}
         """.format(
             bin_json=json.dumps(bin_data, default=str),
             fees_json=json.dumps(interchange_fees, default=str),

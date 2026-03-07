@@ -97,6 +97,35 @@ class PaymentService:
 
         return saved_payment
 
+    def refund_payment(self, payment_id: str, amount: Optional[float] = None) -> Payment:
+        # 1. Fetch Payment
+        payment = self.payment_repo.find_by_id(payment_id)
+        if not payment:
+            raise KeyError(f"Payment {payment_id} not found")
+        
+        if payment.status != PaymentStatus.COMPLETED:
+            raise ValueError(f"Cannot refund payment in status {payment.status}")
+
+        # 2. Get Processor
+        processor = self.processor_registry.get_processor(payment.provider)
+        if not processor:
+            raise ValueError(f"No processor registered for {payment.provider}")
+
+        # 3. Execute Refund
+        processor_resp = processor.refund(
+            processor_transaction_id=payment.provider_payment_id,
+            amount=amount
+        )
+
+        if processor_resp.status != "success":
+            raise RuntimeError(f"Refund failed: {processor_resp.error_message}")
+
+        # 4. Update Payment Record
+        payment.status = PaymentStatus.REFUNDED
+        payment.updated_at = now_utc()
+        
+        return self.payment_repo.save(payment)
+
     def get_payment(self, payment_id: str) -> Payment:
         payment = self.payment_repo.find_by_id(payment_id)
         if not payment:
