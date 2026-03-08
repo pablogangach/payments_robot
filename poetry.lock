@@ -370,6 +370,21 @@ files = [
 ]
 
 [[package]]
+name = "braintree"
+version = "4.42.0"
+description = "Braintree Python Library"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "braintree-4.42.0-py2.py3-none-any.whl", hash = "sha256:5f809216510f331fb2a7233e949080908d09931afc9572615da684c9cdb2d751"},
+    {file = "braintree-4.42.0.tar.gz", hash = "sha256:6cb85424c151ecf49523986b687188774bc5868519025a8d548ffb1cf6df6964"},
+]
+
+[package.dependencies]
+requests = ">=0.11.1,<3.0"
+
+[[package]]
 name = "build"
 version = "1.2.2.post1"
 description = "A simple, correct Python build frontend"
@@ -5312,4 +5327,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<=3.13"
-content-hash = "56e4ee602ef9ecac331261c6c7c60a5fcb2c931fbfaac763597003af5ad046ca"
+content-hash = "a3be5737c6ff44f844330fbe4242798d046e21177a7bcb8cd890fd67f1a808b3"

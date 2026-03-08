@@ -68,8 +68,21 @@ def verify_live_routing():
         data_window="live"
     )
     
+    perf3 = ProviderPerformance(
+        provider=PaymentProvider.BRAINTREE,
+        dimension=dimension,
+        metrics=PerformanceMetrics(
+            auth_rate=0.96,
+            fraud_rate=0.002,
+            avg_latency_ms=400,
+            cost_structure=CostStructure(fixed_fee=0.49, variable_fee_percent=2.59)
+        ),
+        data_window="live"
+    )
+    
     perf_repo.save(perf1)
     perf_repo.save(perf2)
+    perf_repo.save(perf3)
     
     # 2. Setup Routing Service
     fee_service = FeeService()

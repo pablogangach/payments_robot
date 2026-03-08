@@ -41,6 +41,18 @@ class FeeService:
                 variable_fee_percent=3.9,
             ),
             FeeStructure(
+                provider=PaymentProvider.PAYPAL,
+                region="domestic",
+                fixed_fee=0.49,
+                variable_fee_percent=3.49,
+            ),
+            FeeStructure(
+                provider=PaymentProvider.BRAINTREE,
+                region="domestic",
+                fixed_fee=0.49,
+                variable_fee_percent=2.59,
+            ),
+            FeeStructure(
                 provider=PaymentProvider.INTERNAL,
                 region="domestic",
                 card_type="debit",

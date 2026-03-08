@@ -90,7 +90,23 @@ interchange_fee_repo = InterchangeFeeRepository(interchange_fee_store)
 processor_registry = ProcessorRegistry()
 processor_registry.register(PaymentProvider.STRIPE, StripeProcessor())
 processor_registry.register(PaymentProvider.ADYEN, AdyenProcessor())
-processor_registry.register(PaymentProvider.BRAINTREE, BraintreeProcessor())
+processor_registry.register(
+    PaymentProvider.PAYPAL, 
+    PayPalProcessor(
+        client_id=os.getenv("PAYPAL_CLIENT_ID"),
+        secret=os.getenv("PAYPAL_SECRET"),
+        environment=os.getenv("PAYPAL_ENVIRONMENT", "sandbox")
+    )
+)
+processor_registry.register(
+    PaymentProvider.BRAINTREE, 
+    BraintreeProcessor(
+        merchant_id=os.getenv("BRAINTREE_MERCHANT_ID"),
+        public_key=os.getenv("BRAINTREE_PUBLIC_KEY"),
+        private_key=os.getenv("BRAINTREE_PRIVATE_KEY"),
+        environment=os.getenv("BRAINTREE_ENVIRONMENT", "sandbox")
+    )
+)
 processor_registry.register(PaymentProvider.INTERNAL, InternalMockProcessor())
 
 # --- Services ---
