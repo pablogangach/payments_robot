@@ -16,6 +16,7 @@ class PaymentProvider(str, Enum):
     STRIPE = "stripe"
     ADYEN = "adyen"
     BRAINTREE = "braintree"
+    PAYPAL = "paypal"
     INTERNAL = "internal" # For testing or other providers
 
 import uuid
