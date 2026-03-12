@@ -20,6 +20,7 @@ from payments_service.app.routing.ingestion import DataIngestor
 
 from payments_service.app.processors.adapters.stripe_adapter import StripeProcessor
 from payments_service.app.processors.adapters.adyen_adapter import AdyenProcessor
+from payments_service.app.processors.adapters.paypal_adapter import PayPalProcessor
 from payments_service.app.processors.adapters.braintree_adapter import BraintreeProcessor
 from payments_service.app.processors.adapters.internal_mock_adapter import InternalMockProcessor
 
@@ -66,6 +67,7 @@ else:
     card_bin_store = InMemoryRelationalStore()
     interchange_fee_store = InMemoryRelationalStore()
 
+redis_client = None
 if REDIS_URL:
     redis_client = redis.from_url(REDIS_URL)
     # The store expects a model_class for validation. 
@@ -85,6 +87,25 @@ subscription_repo = SubscriptionRepository(db_session) if DATABASE_URL else None
 precalc_repo = PrecalculatedRouteRepository(db_session) if DATABASE_URL else None
 card_bin_repo = CardBINRepository(card_bin_store)
 interchange_fee_repo = InterchangeFeeRepository(interchange_fee_store)
+
+# --- Seeding ---
+if not DATABASE_URL:
+    # Seed default merchant for UI
+    merchant_repo.save(Merchant(
+        id="default_merchant",
+        name="Default Merchant",
+        email="merchant@example.com",
+        tax_id="TAX-001",
+        account_status="active"
+    ))
+    # Seed default customer for UI
+    customer_repo.save(Customer(
+        id="cust_123",
+        merchant_id="default_merchant",
+        first_name="John",
+        last_name="Doe",
+        email="john@example.com"
+    ))
 
 # --- Processors Registration ---
 processor_registry = ProcessorRegistry()
@@ -172,3 +193,6 @@ def get_merchant_service():
 
 def get_customer_service():
     return customer_service
+
+def get_redis_client():
+    return redis_client
